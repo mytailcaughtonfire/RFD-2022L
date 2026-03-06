@@ -1,6 +1,6 @@
 <h1 align="center"><img src="/Assets/Logo.png" height="20px"/> Rōblox: Freedom Distribution <img src="/Assets/Logo.png" height="20px"/></h1>
 
-_This is a fork of Roblox Freedom Distribution that aims to add in a July 8, 2022 Rōblox Studio and Client!_
+_This is a fork of Roblox Freedom Distribution that aims to add in a July 12, 2022 Rōblox Studio and Client!_
 
 ⚠ This is made with the use of LLMs! 
 
@@ -59,4 +59,5 @@ When running, make sure to type n to not overwrite (I'll fix this later..)
 - [ ] Tool Loading
 - [ ] UserID generation
 - [ ] other stuff
+
 
