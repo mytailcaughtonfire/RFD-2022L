@@ -319,6 +319,13 @@ class web_server_handler(http.server.BaseHTTPRequestHandler):
         if not self.is_valid_request:
             return
         log_filter = self.server.logger
+
+        # args[1] is the status code string e.g. '200', '404'
+        try:
+            status = int(args[1])
+        except (IndexError, ValueError, TypeError):
+            status = None
+
         log_filter.log(
             (
                 "%s{ %-5s}%s %s"
@@ -330,4 +337,5 @@ class web_server_handler(http.server.BaseHTTPRequestHandler):
             ),
             context=logger.log_context.WEB_SERVER,
             is_error=False,
+            status=status,
         )
