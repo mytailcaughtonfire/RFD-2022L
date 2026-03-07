@@ -74,6 +74,7 @@ def _(self: web_server_handler) -> bool:
 #    except Exception:
 #        self.send_response(401)
 
+
 @server_path('/Users/1630228')
 @server_path('/game/GetCurrentUser.ashx')
 def _(self: web_server_handler) -> bool:
@@ -99,7 +100,7 @@ def _(self: web_server_handler) -> bool:
 
 @server_path('/device/initialize')
 def _(self: web_server_handler) -> bool:
-    self.send_json({"browserTrackerId": 0, "appDeviceIdentifier": None})
+    self.send_json({"browserTrackerId": 1, "appDeviceIdentifier": None}) # TODO: check if setting browserTrackerId to 1 ruins 2018 and 2021 compat?
     return True
 
 
@@ -109,6 +110,28 @@ def _(self: web_server_handler) -> bool:
         "id": 1,
         "name": "ROBLOX",
         "displayName": "ROBLOX"
+    })
+    return True
+
+
+@server_path(r'/v1/usera/\d+', regex=True)
+def _(self: web_server_handler, match) -> bool:
+    self.send_json({
+        'description': (
+            'Welcome to the Roblox profile! This is where you can check out the newest items '
+            'in the catalog, and get a jumpstart on exploring and building on our Imagination '
+            'Platform. If you want news on updates to the Roblox platform, or great new '
+            'experiences to play with friends, check out blog.roblox.com. Please note, this '
+            'is an automated account. If you need to reach Roblox for any customer service '
+            'needs find help at www.roblox.com/help'
+        ),
+        'created': '2006-02-27T21:06:40.3Z',
+        'isBanned': False,
+        'externalAppDisplayName': None,
+        'hasVerifiedBadge': True,
+        'id': 1,
+        'name': 'Roblox',
+        'displayName': 'Roblox',
     })
     return True
 
