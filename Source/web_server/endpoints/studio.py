@@ -221,17 +221,13 @@ def _(self: web_server_handler) -> bool:
 
 @server_path('/My/settings/json', versions={versions.rōblox.v535})
 def _(self: web_server_handler) -> bool:
-    '''
-    2022M user settings endpoint.  Returns account metadata that Studio
-    expects. Ported from RBLXHUB My/settings/json.php.
-    '''
     base = self.hostname
     self.send_json({
         'ChangeUsernameEnabled': True,
         'IsAdmin': True,
         'UserId': 1,
-        'Name': 'Boblocks',
-        'DisplayName': 'Boblocks',
+        'Name': 'Roblox',
+        'DisplayName': 'Roblox',
         'IsEmailOnFile': True,
         'IsEmailVerified': True,
         'IsPhoneFeatureEnabled': True,
@@ -244,7 +240,7 @@ def _(self: web_server_handler) -> bool:
         'IsSetPasswordNotificationEnabled': False,
         'ChangePasswordRequiresTwoStepVerification': False,
         'ChangeEmailRequiresTwoStepVerification': False,
-        'UserEmail': 'user@localhost',
+        'UserEmail': 'r*********@rbolock.tk',
         'UserEmailMasked': True,
         'UserEmailVerified': True,
         'CanHideInventory': True,
