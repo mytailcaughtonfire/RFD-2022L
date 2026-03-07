@@ -1,5 +1,6 @@
 # Standard library imports
 import json
+import os
 import time
 from email.utils import formatdate
 
@@ -221,6 +222,10 @@ def _(self: web_server_handler) -> bool:
 
 @server_path('/My/settings/json', versions={versions.rōblox.v535})
 def _(self: web_server_handler) -> bool:
+    '''
+    2022M user settings endpoint.  Returns account metadata that Studio
+    expects. Ported from RBLXHUB My/settings/json.php.
+    '''
     base = self.hostname
     self.send_json({
         'ChangeUsernameEnabled': True,
@@ -339,4 +344,25 @@ def _(self: web_server_handler) -> bool:
 @server_path(r'/universal-app-configuration/v1/behaviors/[^/]+/content', regex=True, versions={versions.rōblox.v535})
 def _(self: web_server_handler, match) -> bool:
     self.send_json({})
+    return True
+
+_PCSTUDIOAPP_PATH = os.path.join(os.path.dirname(__file__), 'PCStudioApp.json')
+
+@server_path('/v2/settings/application/PCStudioApp', versions={versions.rōblox.v535})
+def _(self: web_server_handler) -> bool:
+    '''
+    Studio FFlag settings blob (~275KB). Served from PCStudioApp.json
+    sitting next to this file, so it can be edited without touching Python.
+    '''
+    try:
+        with open(_PCSTUDIOAPP_PATH, 'rb') as f:
+            data = f.read()
+    except FileNotFoundError:
+        self.send_json({'applicationSettings': {}})
+        return True
+    self.send_response(200)
+    self.send_header('Content-Type', 'application/json')
+    self.send_header('Content-Length', str(len(data)))
+    self.end_headers()
+    self.wfile.write(data)
     return True

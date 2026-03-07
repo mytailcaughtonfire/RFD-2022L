@@ -836,7 +836,7 @@
         "FFlagParameterizeHandlerTextLenghtLimitWarningMessageEnabled": "True",
         "FFlagUseContentStringForLocalization": "True",
         "DFIntAECRingBufferSizeTenthsMs": "520",
-        "FStringPrivateServerLinkURL": "https?://\\w+\\.roblox(?:labs)?\\.com/games/(\\d+)(?:/.+)?\\?privateServerLinkCode=((?:\\w|-)+)",
+        "FStringPrivateServerLinkURL": "https?:\/\/\\w+\\.roblox(?:labs)?\\.com\/games\/(\\d+)(?:\/.+)?\\?privateServerLinkCode=((?:\\w|-)+)",
         "DFFlagVoiceChatSinglePeerConnectionFactory": "True",
         "DFIntLightstepHTTPTransportHundredthsPercent2": "1",
         "DFIntLightstepHTTPTransportHundredthsPercent2_PlaceFilter": "10000;5064251723",
