@@ -1,11 +1,33 @@
 # Standard library imports
 import json
 import time
+from email.utils import formatdate
 
 # Local application imports
 import util.const
 import util.versions as versions
 from web_server._logic import web_server_handler, server_path
+
+
+_ROBLOSECURITY = (
+    '_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|'
+    '_DGJJD464646464dfgdgdgdCUdgjneth4iht4ih64uh4uihy4y4yuhi4yhuiyhui4yhui4uihy4huiyhu4iyhuihu4hhdghdgihdigdhuigdhuig'
+    'dhuigihugdgidojgijodijogdijogdjoigdjoidijogijodgijdgiojdgijodgijoF'
+)
+
+_RBXID = (
+    '_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|'
+    '_eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI2NDA3MGQyNC0zYWR4LTQ5NzMtODAxYy0yOWNhNzUyNTA5NjIiLCJzdWfdijogdoijdijogijodcB6YExhM'
+)
+
+
+def _make_cookie(name: str, value: str) -> str:
+    '''
+    Builds a Set-Cookie header value with a two-week expiry,
+    matching PHP's setcookie($name, $value, time()+1209600).
+    '''
+    expires = formatdate(time.time() + 1209600, usegmt=True)
+    return f'{name}={value}; expires={expires}; Max-Age=1209600; path=/; HttpOnly'
 
 
 @server_path('/studio/e.png')
@@ -22,25 +44,35 @@ def _(self: web_server_handler) -> bool:
 
 @server_path('/v2/login')
 def _(self: web_server_handler) -> bool:
-    try:
-        # Password must not contain '1'.  This for debugging purposes only.
-        assert (
-            '1' not in json.loads(self.read_content())['password']
-        )
-        self.send_response(200)
-        self.send_header('set-cookie', '.ROBLOSECURITY=_ROBLOSECURITY_')
-        self.send_json({
-            'user': {
-                'id': 1630228,
-                'name': 'qwer',
-                'displayName': 'qwer',
-            },
-            'isBanned': False,
-        }, status=None)
-    except Exception:
-        self.send_response(401)
+    self.send_response(200)
+    self.send_header('set-cookie', _make_cookie('.ROBLOSECURITY', _ROBLOSECURITY))
+    self.send_header('set-cookie', _make_cookie('.RBXID', _RBXID))
+    self.send_json({
+        'user': {
+            'id': 1,
+            'name': 'Roblox',
+            'displayName': 'Roblox',
+        },
+    }, status=None)
     return True
 
+#    try:
+#        # Password must not contain '1'.  This for debugging purposes only.
+#        assert (
+#            '1' not in json.loads(self.read_content())['password']
+#        )
+#        self.send_response(200)
+#        self.send_header('set-cookie', '.ROBLOSECURITY=_ROBLOSECURITY_')
+#        self.send_json({
+#            'user': {
+#                'id': 1630228,
+#                'name': 'qwer',
+#                'displayName': 'qwer',
+#            },
+#            'isBanned': False,
+#        }, status=None)
+#    except Exception:
+#        self.send_response(401)
 
 @server_path('/Users/1630228')
 @server_path('/game/GetCurrentUser.ashx')
@@ -67,7 +99,7 @@ def _(self: web_server_handler) -> bool:
 
 @server_path('/device/initialize')
 def _(self: web_server_handler) -> bool:
-    self.send_json({"browserTrackerId": 1, "appDeviceIdentifier": None}) # TODO: browserTrackerId = 1 on v535, 0 otherwise? gotta test..
+    self.send_json({"browserTrackerId": 0, "appDeviceIdentifier": None})
     return True
 
 
@@ -80,23 +112,11 @@ def _(self: web_server_handler) -> bool:
     })
     return True
 
-_ROBLOSECURITY = (
-    '_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|'
-    '_DGJJD464646464dfgdgdgdCUdgjneth4iht4ih64uh4uihy4y4yuhi4yhuiyhui4yhui4uihy4huiyhu4iyhuihu4hhdghdgihdigdhuigdhuig'
-    'dhuigihugdgidojgijodijogdijogdjoigdjoidijogijodgijdgiojdgijodgijoF'
-)
-
-_RBXID = (
-    '_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|'
-    '_eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI2NDA3MGQyNC0zYWR4LTQ5NzMtODAxYy0yOWNhNzUyNTA5NjIiLCJzdWfdijogdoijdijogijodcB6YExhM'
-)
-
-
 @server_path('/studio-login/v1/login', versions={versions.rōblox.v535})
 def _(self: web_server_handler) -> bool:
     self.send_response(200)
-    self.send_header('set-cookie', f'.ROBLOSECURITY={_ROBLOSECURITY}')
-    self.send_header('set-cookie', f'.RBXID={_RBXID}')
+    self.send_header('set-cookie', _make_cookie('.ROBLOSECURITY', _ROBLOSECURITY))
+    self.send_header('set-cookie', _make_cookie('.RBXID', _RBXID))
     self.send_json({
         'user': {
             'UserId': 1,
