@@ -1,5 +1,6 @@
 # Standard library imports
 import functools
+import os
 import urllib.parse
 import dataclasses
 import ipaddress
@@ -27,6 +28,7 @@ class obj_type(logic.bin_entry):
     app_host: str = dataclasses.field(init=False)
 
     user_code: str | None
+    use_rbolock_base: bool = False
     launch_delay: float = 0
 
     @override
@@ -79,10 +81,14 @@ class obj_type(logic.bin_entry):
 
     @override
     def get_base_url(self) -> str:
+        if self.use_rbolock_base:
+            return f'https://www.rbolock.tk:{self.web_port}'
         return f'https://{self.web_host}:{self.web_port}'
 
     @override
     def get_app_base_url(self) -> str:
+        if self.use_rbolock_base:
+            return f'https://www.rbolock.tk:{self.web_port}'
         return f'https://{self.app_host}:{self.web_port}'
 
     @override
@@ -102,12 +108,19 @@ class obj_type(logic.bin_entry):
 
     def make_client_popen(self) -> None:
         base_url = self.get_base_url()
-        self.init_popen(
-            self.get_versioned_path('RobloxPlayerBeta.exe'),
-            (
-                '-a', f'{base_url}/login/negotiate.ashx',
-                '-j', f'{base_url}/game/PlaceLauncher.ashx?' +
-                urllib.parse.urlencode({k: v for k, v in {
+        version = self.retr_version()
+
+        if version == util.versions.rōblox.v535:
+            # 2022M uses a direct JSON joinScript endpoint instead of the two-step
+            # PlaceLauncher → join.ashx flow used by older versions.
+            join_url = f'{base_url}/game/PlaceLaunch22.ashx?' + urllib.parse.urlencode({
+                'MachineAddress': self.rcc_host,
+                'ServerPort': self.rcc_port,
+                'UserCode': self.user_code,
+            })
+        else:
+            join_url = f'{base_url}/game/PlaceLauncher.ashx?' + urllib.parse.urlencode(
+                {k: v for k, v in {
                     'MachineAddress': self.rcc_host,
                     'ServerPort': self.rcc_port,
                     'UserCode': self.user_code,
@@ -117,7 +130,19 @@ class obj_type(logic.bin_entry):
                     'rcc-host-addr': self.rcc_host,
                     'rcc-port': self.rcc_port,
                     'user-code': self.user_code,
-                }.items() if v}),
+                }.items() if v}
+            )
+
+        exe_path = self.get_versioned_path('RobloxPlayerBeta.exe')
+        if not os.path.isfile(exe_path):
+            alt_path = self.get_versioned_path('Roblox.exe')
+            if os.path.isfile(alt_path):
+                exe_path = alt_path
+        self.init_popen(
+            exe_path,
+            (
+                '-a', f'{base_url}/login/negotiate.ashx',
+                '-j', join_url,
                 '-t', '1',
             ))
 
