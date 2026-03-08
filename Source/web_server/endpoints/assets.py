@@ -33,9 +33,15 @@ def _(self: web_server_handler) -> bool:
         )
         return True
 
+    # Forward the Accept header so DXT texture requests (rbx-format/spec_dxt,
+    # rbx-format/norm_dxt, etc.) get the right format from Roblox CDN,
+    # matching RBLXHUB's asset.php special-case handling.
+    accept = self.headers.get('Accept')
+
     asset = asset_cache.get_asset(
         asset_id,
         bypass_blocklist=self.is_privileged,
+        accept=accept,
     )
 
     if isinstance(asset, returns.ret_data):

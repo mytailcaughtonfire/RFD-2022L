@@ -72,6 +72,17 @@ def get_rōblox_cookie() -> str | None:
     )
 
 
+# Accept headers that indicate a DXT-compressed texture request.
+# Roblox CDN serves a different (raw DXT) format when these are present,
+# matching RBLXHUB's special-case handling in asset.php.
+_DXT_ACCEPT_HEADERS = frozenset({
+    'rbx-format/color_dxt',
+    'rbx-format/spec_dxt',
+    'rbx-format/norm_dxt',
+    'ktx/dxt',
+})
+
+
 def unzip(data: bytes) -> bytes:
     try:
         return gzip.decompress(data)
@@ -79,7 +90,7 @@ def unzip(data: bytes) -> bytes:
         return data
 
 
-def download_item(url: str, cookie: str | None = None) -> bytes | None:
+def download_item(url: str, cookie: str | None = None, accept: str | None = None) -> bytes | None:
     if cookie is None:
         cookie = get_rōblox_cookie()
     headers = {
@@ -92,6 +103,12 @@ def download_item(url: str, cookie: str | None = None) -> bytes | None:
             }.items()
         ),
     }
+
+    if accept is not None:
+        headers['Accept'] = accept
+        if accept in _DXT_ACCEPT_HEADERS:
+            # CDN returns gzip-compressed DXT; request it explicitly
+            headers['Accept-Encoding'] = 'gzip'
 
     place_id = os.environ.get("rfdplaceid")
     if place_id:
@@ -109,14 +126,17 @@ def download_item(url: str, cookie: str | None = None) -> bytes | None:
         return None
 
 
-def download_rōblox_asset(asset_id: int, cookie: str | None = None) -> bytes | None:
+def download_rōblox_asset(asset_id: int, cookie: str | None = None, accept: str | None = None) -> bytes | None:
     for key in {'id'}:
         result = download_item(
             'https://assetdelivery.roblox.com/v1/asset/?%s=%s' %
             (key, asset_id),
             cookie=cookie,
+            accept=accept,
         )
         if result is not None:
+            # DXT textures come back gzip-compressed; decompress them.
+            # Regular assets are already handled by unzip().
             return unzip(result)
 
 
