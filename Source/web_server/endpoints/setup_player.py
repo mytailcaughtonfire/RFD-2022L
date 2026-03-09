@@ -22,6 +22,19 @@ def _(self: web_server_handler) -> bool:
     return True
 
 
+@server_path('/rfd/set-pending-user-code')
+def _(self: web_server_handler) -> bool:
+    '''
+    Called by the player routine before launching the v535 client.
+    Stores the user_code on the server object so /v1/join-game can read it,
+    since v535 never fetches the -j URL and UserCode never arrives via query string.
+    '''
+    user_code = self.query.get('user_code', '')
+    self.server.pending_user_code = user_code or None
+    self.send_data(b'ok')
+    return True
+
+
 @server_path('/rfd/is-player-allowed')
 def _(self: web_server_handler) -> bool:
     database = self.server.storage.players

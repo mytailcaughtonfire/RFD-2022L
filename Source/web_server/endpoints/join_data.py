@@ -308,11 +308,11 @@ def _(self: web_server_handler) -> bool:
 
     rcc_host = str(query_args.get('MachineAddress', '127.0.0.1'))
     rcc_port = int(query_args.get('ServerPort', util.const.RFD_DEFAULT_PORT))
-    user_code = query_args.get('UserCode')
-    if not user_code:
-        user_code = self.game_config.server_core.retrieve_default_user_code(
-            time.time(),
-        )
+    user_code = (
+        query_args.get('UserCode')
+        or getattr(self.server, 'pending_user_code', None)
+        or self.game_config.server_core.retrieve_default_user_code(time.time())
+    )
 
     result = init_player(self.game_config, user_code)
     if result is None:
@@ -331,60 +331,51 @@ def _(self: web_server_handler) -> bool:
         place_fetch_host = self.hostname.replace('www.rbolock.tk', 'assetdelivery.rbolock.tk')
 
     join_script = {
-        'ClientPort': 0,
+        'ClientTicket': '',
+        'NewClientTicket': '',
         'MachineAddress': rcc_host,
         'ServerPort': rcc_port,
+        'CharacterAppearance': f'{self.hostname}/v1.1/avatar-fetch?userId={id_num}',
+        'CharacterAppearanceId': id_num,
+        'characterAppearanceId': id_num,
+        'UserId': id_num,
+        'UserName': username,
+        'DisplayName': username,
+        'MembershipType': 0,
+        'AccountAge': server_core.retrieve_account_age(id_num, user_code),
+        'PingUrl': '',
+        'PingInterval': 120,
+        'ChatStyle': server_core.chat_style.value,
+        'GameChatType': 'AllUsers',
+        'TokenValue': 'WbTnhqvC68TN2/lveKnrgA==',
+        'PepperId': 1701041219,
+        'RccVersion': '0.603.3.6030569',
+        'PlaceId': util.const.PLACE_IDEN_CONST,
+        'UniverseId': util.const.PLACE_IDEN_CONST,
+        'GameId': str(util.const.PLACE_IDEN_CONST),
+        'BaseUrl': self.hostname,
+        'PlaceFetchUrl': f'{place_fetch_host}/asset/?id={util.const.PLACE_IDEN_CONST}',
+        'CreatorId': 0,
+        'CreatorType': 'User',
+        'FollowUserId': 0,
+        'IsTeleport': False,
+        'SeleniumTestMode': False,
+        'IsUnknownOrUnder13': False,
+        'IsUserPlayingWithTeleportedChildren': False,
+        'CountryCode': 'US',
+        'IsoCountryCode': 'US',
+        'DataCenterId': '',
+        'UniverseAgeInDays': 0,
+        'MatchmakingDecisionId': '',
+        'MeasureConnectionPerformance': False,
+        'SendAdditionalTelemetryData': False,
+        'DirectServerReturn': True,
         'ServerConnections': [
             {
                 'Address': rcc_host,
                 'Port': rcc_port,
             }
         ],
-        'DirectServerReturn': True,
-        'PepperId': 1701041219,
-        'TokenValue': 'WbTnhqvC68TN2/lveKnrgA==',
-        'PingUrl': '',
-        'PingInterval': 120,
-        'UserName': username,
-        'DisplayName': username,
-        'HasVerifiedBadge': False,
-        'SeleniumTestMode': False,
-        'UserId': id_num,
-        'RobloxLocale': 'en_us',
-        'GameLocale': 'en_us',
-        'SuperSafeChat': False,
-        'FlexibleChatEnabled': False,
-        'CharacterAppearance': f'{self.hostname}/v1.1/avatar-fetch?userId={id_num}',
-        'characterAppearanceId': id_num,
-        'ClientTicket': 'no',
-        'GameId': 'f8a9c0b7-df1a-4eed-b9e3-2c08a38b3a77',
-        'PlaceId': util.const.PLACE_IDEN_CONST,
-        'UniverseId': util.const.PLACE_IDEN_CONST,
-        'BaseUrl': self.hostname,
-        'PlaceFetchUrl': f'{place_fetch_host}/asset/?id={util.const.PLACE_IDEN_CONST}',
-        'ChatStyle': server_core.chat_style.value,
-        'CreatorId': 0,
-        'CreatorTypeEnum': 'User',
-        'MembershipType': 'None',
-        'AccountAge': server_core.retrieve_account_age(id_num, user_code),
-        'CookieStoreFirstTimePlayKey': 'rbx_evt_ftp',
-        'CookieStoreFiveMinutePlayKey': 'rbx_evt_fmp',
-        'CookieStoreEnabled': True,
-        'IsUnknownOrUnder13': False,
-        'GameChatType': 'AllUsers',
-        'SessionId': '',
-        'AnalyticsSessionId': 'c89589f1-d1de-46e3-80e0-2703d1159409',
-        'DataCenterId': 370,
-        'FollowUserId': 0,
-        'CountryCode': 'US',
-        'AlternateName': '',
-        'RandomSeed1': '',
-        'ClientPublicKeyData': 'Test',
-        'RccVersion': '0.603.3.6030569',
-        'ChannelName': '',
-        'VerifiedAMP': 0,
-        'PrivateServerOwnerID': 0,
-        'PrivateServerID': '',
     }
 
     self.send_json({

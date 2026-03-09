@@ -104,6 +104,14 @@ class obj_type(logic.bin_entry):
         super().bootstrap()
         time.sleep(self.launch_delay)
         self.finalise_user_code()
+        if self.retr_version() == util.versions.rōblox.v535:
+            # v535 never fetches the -j URL, so UserCode never reaches
+            # /v1/join-game via query string.  Push it to the web server
+            # via a dedicated RFD endpoint before launching the client.
+            self.send_request(
+                '/rfd/set-pending-user-code?' +
+                urllib.parse.urlencode({'user_code': self.user_code or ''}),
+            )
         self.make_client_popen()
 
     def make_client_popen(self) -> None:
