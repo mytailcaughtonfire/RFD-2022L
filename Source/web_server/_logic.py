@@ -73,6 +73,11 @@ def server_path(
 
 
 class web_server(http.server.ThreadingHTTPServer):
+    # Populated by /v1/authentication-ticket/redeem before the client hits
+    # /v1/join-game.  Contains params passed from the player routine via -t,
+    # e.g. {'user_code': 'helo', 'display_name': 'test'}.
+    pending_join_data: dict
+
     def __init__(
         self,
         port: int,
@@ -83,6 +88,7 @@ class web_server(http.server.ThreadingHTTPServer):
         *args, **kwargs,
     ) -> None:
         self.game_config = game_config
+        self.pending_join_data = {}
         self.data_transferer = game_config.data_transferer
         self.storage = game_config.storage
         self.server_mode = server_mode

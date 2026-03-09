@@ -1,5 +1,7 @@
 # Standard library imports
+import base64
 import functools
+import json
 import os
 import urllib.parse
 import dataclasses
@@ -142,8 +144,15 @@ class obj_type(logic.bin_entry):
             exe_path,
             (
                 '-a', f'{base_url}/login/negotiate.ashx',
-                '-j', join_url,
-                '-t', '1',
+                '-j', join_url, # this doesn't get passed to the webserver in v535 unlike v463. why??
+                # -t is sent verbatim as {"authenticationTicket": "<value>"} to
+                # /v1/authentication-ticket/redeem. We base64-encode a JSON blob
+                # of join params so it survives as a plain alphanumeric string
+                # (raw JSON gets truncated by the client due to quote handling).
+                '-t', base64.b64encode(json.dumps({
+                    'user_code':    self.user_code or '',
+                    'display_name': 'test',
+                }).encode()).decode(),
             ))
 
     @override

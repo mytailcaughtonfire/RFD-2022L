@@ -149,9 +149,21 @@ def _(self: web_server_handler) -> bool:
 def _(self: web_server_handler) -> bool:
     '''
     2022M authentication-ticket redeem stub.
-    The desktop client calls this on api.rbolock.tk; we always
-    return success so it can proceed with startup.
+    The client POSTs {"authenticationTicket": "<value>"} where the value is
+    whatever was passed as -t to the client launcher.  The player routine
+    encodes join params as a base64-encoded JSON blob there, e.g.:
+        base64({"user_code": "helo", "display_name": "test"})
+    We decode and parse it, storing the result on self.server.pending_join_data
+    so /v1/join-game can read it (v535 never fetches the -j URL).
     '''
+    import base64 as _base64
+    try:
+        content_length = int(self.headers.get('Content-Length', 0))
+        body = self.rfile.read(content_length) if content_length else b''
+        ticket = json.loads(body).get('authenticationTicket', '')
+        self.server.pending_join_data = json.loads(_base64.b64decode(ticket).decode())
+    except Exception:
+        self.server.pending_join_data = {}
     self.send_json({
         "userId": 21,
         "authenticationTicket": "local-ticket",

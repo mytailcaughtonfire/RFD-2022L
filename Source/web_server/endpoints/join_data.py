@@ -209,110 +209,35 @@ def _(self: web_server_handler) -> bool:
     }, prefix=b'--rbxsig2%0%\r\n')
     return True
 
-
-@server_path('/game/PlaceLaunch22.ashx', versions={versions.rōblox.v535})
-def _(self: web_server_handler) -> bool:
-    '''
-    2022M (v535) join endpoint.  Returns a JSON joinScript directly so the
-    client can connect to Server.exe without an intermediate PlaceLauncher
-    redirect.  TokenValue and PepperId are bypass values that disable the
-    client's authentication checks.
-    '''
-    query_args: dict[str, str] = json.loads(
-        self.headers.get('Roblox-Session-Id', '{}'),
-    ) | self.query
-
-    rcc_host = str(query_args.get('MachineAddress', '127.0.0.1'))
-    rcc_port = int(query_args.get('ServerPort', util.const.RFD_DEFAULT_PORT))
-    user_code = query_args.get('UserCode')
-    if not user_code:
-        user_code = self.game_config.server_core.retrieve_default_user_code(
-            time.time(),
-        )
-
-    result = init_player(self.game_config, user_code)
-    if result is None:
-        self.send_json({'error': '403: disallowed user'}, 403)
-        return True
-
-    (id_num, username) = result
-    server_core = self.game_config.server_core
-
-    # v535 client may fetch place from assetdelivery; use it for PlaceFetchUrl
-    # when host is www so the request hits our server (hosts: assetdelivery.rbolock.tk).
-    place_fetch_host = self.hostname
-    if 'www.rbolock.tk' in self.hostname:
-        place_fetch_host = self.hostname.replace('www.rbolock.tk', 'assetdelivery.rbolock.tk')
-
-    join_script = {
-        'ClientTicket': '',
-        'NewClientTicket': '',
-        'MachineAddress': rcc_host,
-        'ServerPort': rcc_port,
-        'CharacterAppearance': f'{self.hostname}/v1.1/avatar-fetch?userId={id_num}',
-        'CharacterAppearanceId': id_num,
-        'characterAppearanceId': id_num,
-        'UserId': id_num,
-        'UserName': username,
-        'DisplayName': username,
-        'MembershipType': 0,
-        'AccountAge': server_core.retrieve_account_age(id_num, user_code),
-        'PingUrl': '',
-        'PingInterval': 0,
-        'ChatStyle': server_core.chat_style.value,
-        'GameChatType': 'AllUsers',
-        # Bypass values — skip the client's network security key / signature checks.
-        'TokenValue': 'WbTnhqvC68TN2/lveKnrgA==',
-        'PepperId': 1701041219,
-        'RccVersion': '0.603.3.6030569',
-        'PlaceId': util.const.PLACE_IDEN_CONST,
-        'UniverseId': util.const.PLACE_IDEN_CONST,
-        'GameId': str(util.const.PLACE_IDEN_CONST),
-        'BaseUrl': self.hostname,
-        'PlaceFetchUrl': f'{place_fetch_host}/asset/?id={util.const.PLACE_IDEN_CONST}',
-        'CreatorId': 0,
-        'CreatorType': 'User',
-        'FollowUserId': 0,
-        'IsTeleport': False,
-        'SeleniumTestMode': False,
-        'IsUnknownOrUnder13': False,
-        'IsUserPlayingWithTeleportedChildren': False,
-        'CountryCode': 'US',
-        'IsoCountryCode': 'US',
-        'DataCenterId': '',
-        'UniverseAgeInDays': 0,
-        'MatchmakingDecisionId': '',
-        'MeasureConnectionPerformance': False,
-        'SendAdditionalTelemetryData': False,
-        'DirectServerReturn': False,
-        'ServerConnections': [
-            {
-                'Address': rcc_host,
-                'Port': rcc_port,
-            }
-        ],
-    }
-    self.send_json(join_script)
-    return True
-
-
 @server_path('/v1/join-game', versions={versions.rōblox.v535})
 def _(self: web_server_handler) -> bool:
     '''
     2022M API join endpoint (RBLXHUB-style).
     Returns {"status": 2, "message": null, "joinScript": {...}}.
     '''
+    # -------------------------------------------------------------------------
+    # Join params passed from the player routine via -t (base64-encoded JSON).
+    # To add a new param: add it to the json.dumps({...}) in routines/player/__init__.py,
+    # then read it here with join_data.get('your_key', default).
+    # -------------------------------------------------------------------------
+    join_data: dict = getattr(self.server, 'pending_join_data', {}) or {}
+
     query_args: dict[str, str] = json.loads(
         self.headers.get('Roblox-Session-Id', '{}'),
     ) | self.query
 
     rcc_host = str(query_args.get('MachineAddress', '127.0.0.1'))
     rcc_port = int(query_args.get('ServerPort', util.const.RFD_DEFAULT_PORT))
-    user_code = query_args.get('UserCode')
-    if not user_code:
-        user_code = self.game_config.server_core.retrieve_default_user_code(
-            time.time(),
-        )
+
+    # join_data['user_code'] → passed via -u flag e.g. `python _main.py player -u helo`
+    user_code = (
+        query_args.get('UserCode')
+        or join_data.get('user_code')
+        or self.game_config.server_core.retrieve_default_user_code(time.time())
+    )
+
+    # join_data.get('display_name') → display name shown in-game (can differ from username)
+    display_name_override = join_data.get('display_name')
 
     result = init_player(self.game_config, user_code)
     if result is None:
@@ -346,7 +271,7 @@ def _(self: web_server_handler) -> bool:
         'PingUrl': '',
         'PingInterval': 120,
         'UserName': username,
-        'DisplayName': username,
+        'DisplayName': join_data.get('display_name') or username,
         'HasVerifiedBadge': False,
         'SeleniumTestMode': False,
         'UserId': id_num,
