@@ -82,6 +82,14 @@ def subparse(
         help='If --run_client is passed in, determines the user code for the player which joins the server.\nUser codes derive a user name, user iden number, and other characteristics of any particular player',
     )
 
+    subparser.add_argument(
+        '--display_name', '-dn',
+        type=str,
+        nargs='*',
+        default=[],
+        help='If --run_client is passed in, determines the display name for the player which joins the server.\n Only applicable for 2022M. Not required, but useful if needed.',
+    )
+
     log_group = subparser.add_mutually_exclusive_group()
     log_group.add_argument(
         '--quiet', '-q',
@@ -247,6 +255,7 @@ def _(
                     web_port=web_port,
                     user_code=args_ns.user_code,
                     logger=log_filter,
+                    display_name=args_ns.display_name,
                     use_rbolock_base=_ssl_ctx.use_rblxhub_certs(),
                     # Some CoreGUI elements don't render properly if we join too early.
                     launch_delay=3,

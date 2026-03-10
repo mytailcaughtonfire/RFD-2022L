@@ -52,11 +52,11 @@ def _(
         help='Determines the user code for the player which joins the server.\nUser codes derive a user name, user iden number, and other characteristics of any particular player.',
     )
     subparser.add_argument(
-        '--display_name',
+        '--display_name', '-dn',
         type=str,
         nargs='*',
         default=[],
-        help='Determines the user code for the player which joins the server.\nUser codes derive a user name, user iden number, and other characteristics of any particular player.',
+        help='Determines the display name for the player which joins the server.\n Only applicable for 2022M. Not required, but useful if needed.',
     )
     subparser.add_argument(
         '--quiet', '-q',
