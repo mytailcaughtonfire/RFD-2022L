@@ -1,9 +1,8 @@
 # Standard library imports
-import base64
 import functools
-import json
 import os
 import urllib.parse
+import uuid
 import dataclasses
 import ipaddress
 import time
@@ -30,6 +29,7 @@ class obj_type(logic.bin_entry):
     app_host: str = dataclasses.field(init=False)
 
     user_code: str | None
+    display_name: str | None
     use_rbolock_base: bool = False
     launch_delay: float = 0
 
@@ -112,7 +112,7 @@ class obj_type(logic.bin_entry):
         base_url = self.get_base_url()
         version = self.retr_version()
 
-        if version == util.versions.rōblox.v535:
+        if version == util.versions.rōblox.v535: # note, join_url isn't passed
             # 2022M uses a direct JSON joinScript endpoint instead of the two-step
             # PlaceLauncher → join.ashx flow used by older versions.
             join_url = f'{base_url}/game/PlaceLaunch22.ashx?' + urllib.parse.urlencode({
@@ -135,6 +135,21 @@ class obj_type(logic.bin_entry):
                 }.items() if v}
             )
 
+        # v535: generate a unique token, register join params with the web server,
+        # then pass the token as -t so /v1/authentication-ticket/redeem can
+        # associate this client's IP with its join config for /v1/join-game.
+        join_token = '1'
+        if version == util.versions.rōblox.v535:
+            join_token = str(uuid.uuid4())
+            self.send_request(
+                '/rfd/player-join-config?' +
+                urllib.parse.urlencode({
+                    'token':        join_token,
+                    'user_code':    self.user_code or '',
+                    'display_name': self.display_name or '',
+                }),
+            )
+
         exe_path = self.get_versioned_path('RobloxPlayerBeta.exe')
         if not os.path.isfile(exe_path):
             alt_path = self.get_versioned_path('Roblox.exe')
@@ -145,13 +160,10 @@ class obj_type(logic.bin_entry):
             (
                 '-a', f'{base_url}/login/negotiate.ashx',
                 '-j', join_url, # this doesn't get passed to the webserver in v535 unlike v463. why??
-                # v535: encode join params as a base64 JSON blob so the redeem
-                # handler can store them on self.server.pending_join_data.
-                # Other versions: plain '1' (ticket is unused by RFD there).
-                '-t', base64.b64encode(json.dumps({
-                    'user_code':    self.user_code or '',
-                    'display_name': 'test',
-                }).encode()).decode() if version == util.versions.rōblox.v535 else '1',
+                # v535: the UUID token lets the redeem handler look up this
+                # client's join config by IP in self.server.join_configs.
+                # Other versions: plain '1' (ticket unused by RFD).
+                '-t', join_token,
             ))
 
     @override

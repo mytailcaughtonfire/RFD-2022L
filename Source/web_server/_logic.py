@@ -73,10 +73,20 @@ def server_path(
 
 
 class web_server(http.server.ThreadingHTTPServer):
-    # Populated by /v1/authentication-ticket/redeem before the client hits
-    # /v1/join-game.  Contains params passed from the player routine via -t,
-    # e.g. {'user_code': 'helo', 'display_name': 'test'}.
-    pending_join_data: dict
+    # Populated by /rfd/player-join-config before the client launches.
+    # Maps token (UUID str) → join param dict {'user_code', 'display_name', ...}.
+    # Keyed by UUID token → join param dict.
+    # Populated by /rfd/player-join-config before client launch.
+    join_configs: dict[str, dict]
+
+    # Keyed by client IP → UUID token.
+    # Populated by /v1/authentication-ticket/redeem.
+    # Consumed (popped) by /v1/join-game.
+    ip_to_token: dict[str, str]
+
+    # Populated by /v1/authentication-ticket/redeem.
+    # Maps client_ip (str) → token (UUID str).
+    pending_tokens: dict[str, str]
 
     def __init__(
         self,
@@ -88,7 +98,9 @@ class web_server(http.server.ThreadingHTTPServer):
         *args, **kwargs,
     ) -> None:
         self.game_config = game_config
-        self.pending_join_data = {}
+        self.join_configs = {}
+        self.ip_to_token  = {}
+        self.pending_tokens = {}
         self.data_transferer = game_config.data_transferer
         self.storage = game_config.storage
         self.server_mode = server_mode

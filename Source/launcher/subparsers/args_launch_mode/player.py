@@ -52,6 +52,13 @@ def _(
         help='Determines the user code for the player which joins the server.\nUser codes derive a user name, user iden number, and other characteristics of any particular player.',
     )
     subparser.add_argument(
+        '--display_name',
+        type=str,
+        nargs='*',
+        default=[],
+        help='Determines the user code for the player which joins the server.\nUser codes derive a user name, user iden number, and other characteristics of any particular player.',
+    )
+    subparser.add_argument(
         '--quiet', '-q',
         action='store_true',
         help='Suppresses console output.',
@@ -97,12 +104,13 @@ def _(
             web_host=web_host,
             web_port=web_port,
             user_code=user_code,
+            display_name=display_name,
             logger=log_filter,
             use_rbolock_base=use_rbolock,
         )
         for (
-            web_host, rcc_host, web_port, rcc_port, user_code,
+            web_host, rcc_host, web_port, rcc_port, user_code, display_name,
         ) in itertools.zip_longest(
-            args_ns.web_host, args_ns.rcc_host, args_ns.web_port, args_ns.rcc_port, args_ns.user_code,
+            args_ns.web_host, args_ns.rcc_host, args_ns.web_port, args_ns.rcc_port, args_ns.user_code, args_ns.display_name,
         )
     ]

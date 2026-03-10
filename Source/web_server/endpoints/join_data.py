@@ -215,29 +215,40 @@ def _(self: web_server_handler) -> bool:
     2022M API join endpoint (RBLXHUB-style).
     Returns {"status": 2, "message": null, "joinScript": {...}}.
     '''
-    # -------------------------------------------------------------------------
-    # Join params passed from the player routine via -t (base64-encoded JSON).
-    # To add a new param: add it to the json.dumps({...}) in routines/player/__init__.py,
-    # then read it here with join_data.get('your_key', default).
-    # -------------------------------------------------------------------------
-    join_data: dict = getattr(self.server, 'pending_join_data', {}) or {}
-
     query_args: dict[str, str] = json.loads(
         self.headers.get('Roblox-Session-Id', '{}'),
     ) | self.query
 
+    # -------------------------------------------------------------------------
+    # Retrieve join params registered by the player routine before client launch.
+    # Flow: routine → /rfd/player-join-config?token=<uuid>&user_code=...
+    #       client  → POST /v1/authentication-ticket/redeem (sends token as -t)
+    #       server  → stores client_ip → token in self.server.pending_tokens
+    #       here    → look up token → join params in self.server.join_configs
+    #
+    # To add a new param: add it to /rfd/player-join-config query in
+    # routines/player/__init__.py, store it in join_configs in setup_player.py,
+    # then read it here with join_config.get('your_key', default).
+    # -------------------------------------------------------------------------
+    client_ip = self.client_address[0]
+    ip_to_token: dict = getattr(self.server, 'ip_to_token',   {})
+    join_configs: dict = getattr(self.server, 'join_configs',  {})
+    # Pop both mappings so they don't linger after the client has joined.
+    token = ip_to_token.pop(client_ip, None)
+    join_config: dict = join_configs.pop(token, {}) if token else {}
+
     rcc_host = str(query_args.get('MachineAddress', '127.0.0.1'))
     rcc_port = int(query_args.get('ServerPort', util.const.RFD_DEFAULT_PORT))
 
-    # join_data['user_code'] → passed via -u flag e.g. `python _main.py player -u helo`
+    # join_config['user_code'] → passed via -u e.g. `python _main.py player -u helo`
     user_code = (
         query_args.get('UserCode')
-        or join_data.get('user_code')
+        or join_config.get('user_code')
         or self.game_config.server_core.retrieve_default_user_code(time.time())
     )
 
-    # join_data.get('display_name') → display name shown in-game (can differ from username)
-    display_name_override = join_data.get('display_name')
+    # join_config['display_name'] → display name shown in-game (can differ from username)
+    display_name_override = join_config.get('display_name')
 
     result = init_player(self.game_config, user_code)
     if result is None:
@@ -271,7 +282,9 @@ def _(self: web_server_handler) -> bool:
         'PingUrl': '',
         'PingInterval': 120,
         'UserName': username,
-        'DisplayName': join_data.get('display_name') or username,
+        # join_config['display_name'] overrides display name if provided,
+        # otherwise falls back to username resolved from user_code.
+        'DisplayName': display_name_override or username,
         'HasVerifiedBadge': False,
         'SeleniumTestMode': False,
         'UserId': id_num,
