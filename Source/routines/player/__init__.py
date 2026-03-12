@@ -81,8 +81,41 @@ class obj_type(logic.bin_entry):
         res = self.send_request('/rfd/default-user-code')
         self.user_code = str(res.read(), encoding='utf-8')
 
+    def get_server_url(self) -> str:
+        '''
+        URL used by the routine itself to talk to the web server (send_request).
+        Always uses the raw IP/host — never the rbolock alias — so it works
+        whether or not the rbolock hosts file entries are present on this machine.
+        '''
+        return f'https://{self.web_host}:{self.web_port}'
+
+    @override
+    def send_request(self, path: str, timeout: float = 7):
+        '''
+        Always connects via the raw IP, not the rbolock alias.
+        The rbolock alias is only for the Roblox client's SSL verification.
+        '''
+        import urllib.request as _req
+        import urllib.error as _err
+        try:
+            return _req.urlopen(
+                f'{self.get_server_url()}{path}',
+                context=self.get_none_ssl(),
+                timeout=timeout,
+            )
+        except _err.URLError:
+            raise Exception(
+                'No server is currently running on %s (%s).' %
+                (self.get_server_url(), path),
+            )
+
     @override
     def get_base_url(self) -> str:
+        '''
+        URL embedded in the client launch args (-a, -j).
+        Uses the rbolock alias when certs require it so the client's
+        SSL verification passes against the rbolock certificate.
+        '''
         if self.use_rbolock_base:
             return f'https://www.rbolock.tk:{self.web_port}'
         return f'https://{self.web_host}:{self.web_port}'

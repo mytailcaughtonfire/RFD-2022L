@@ -365,3 +365,8 @@ def _(self: web_server_handler) -> bool:
 def _(self: web_server_handler, match) -> bool:
     self.send_json({'canManage': True, 'canCloudEdit': True})
     return True
+
+@server_path(r'/v1/user/\d+/canmanage/\d+', regex=True, versions={versions.rōblox.v535})
+def _(self: web_server_handler, match) -> bool:
+    self.send_json({'Success': True, 'CanManage': True})
+    return True

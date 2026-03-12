@@ -193,6 +193,13 @@ class asseter:
             return returns.construct()
 
     def _fetch_asset(self, asset_id: int | str, accept: str | None = None) -> returns.base_type:
+        # Always check local cache first — covers assets added via add_asset()
+        # (e.g. uploaded via Data/Upload.ashx) that won't exist on Roblox CDN.
+        asset_path = self.get_asset_path(asset_id)
+        local_data = self._load_file(asset_path)
+        if local_data is not None:
+            return returns.construct(data=local_data)
+
         redirect_info = self.redirect_func(asset_id)
         if redirect_info is not None:
             return self._load_redir_asset(asset_id=asset_id, redirect=redirect_info)
