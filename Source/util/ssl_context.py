@@ -7,12 +7,12 @@ import functools
 import os
 import platform
 import subprocess
-import tempfile
 
 # Local application imports
 import logger
 import util.resource
 import trustme
+import tempfile
 
 
 # RBLXHUB CA from main.go - installed to Windows root store for v535 trust
@@ -49,44 +49,97 @@ Z78Z
 '''
 
 
-def _get_rblxhub_cert_paths() -> tuple[str, str] | None:
-    '''
-    Returns (cert_path, key_path) if RBLXHUB certificates exist.
-    Searches: RFD/certificates/, sibling RBLXHubLite/.../apache/certificats/
-    '''
-    base = util.resource.get_rfd_top_dir()
-    candidates = [
-        (os.path.join(base, 'certificates', 'main-server.crt'),
-         os.path.join(base, 'certificates', 'main-server.com.key')),
-        (os.path.join(base, 'certificates', 'main-server.crt'),
-         os.path.join(base, 'certificates', 'main-server.key')),
-        (os.path.join(base, '..', 'RBLXHubLite', 'RBLXHUBLiteClients',
-          'webserver', 'apache', 'certificats', 'main-server.crt'),
-         os.path.join(base, '..', 'RBLXHubLite', 'RBLXHUBLiteClients',
-          'webserver', 'apache', 'certificats', 'main-server.com.key')),
-        (os.path.join(base, '..', 'RBLXHubLite', 'RBLXHUBLiteClients',
-          'webserver', 'apache', 'certificats', 'main-server.crt'),
-         os.path.join(base, '..', 'RBLXHubLite', 'RBLXHUBLiteClients',
-          'webserver', 'apache', 'certificats', 'main-server.key')),
-    ]
-    for cert_path, key_path in candidates:
-        cert_path = os.path.normpath(cert_path)
-        key_path = os.path.normpath(key_path)
-        if os.path.isfile(cert_path) and os.path.isfile(key_path):
-            return (cert_path, key_path)
-    return None
+# ---------------------------------------------------------------------------
+# Embedded RBLXHUB server certificate and private key.
+# ---------------------------------------------------------------------------
+
+RBLXHUB_SERVER_CERT_PEM = b'''
+-----BEGIN CERTIFICATE-----
+MIIDYjCCAkqgAwIBAgIUALRdujcI5PfeWESa8ojMg64uKOAwDQYJKoZIhvcNAQEF
+BQAwFzEVMBMGA1UEAwwMKi5yYm9sb2NrLnRrMB4XDTI0MDcxNjE3NTEwM1oXDTI1
+MDcxNjE3NTEwM1owFzEVMBMGA1UEAwwMKi5yYm9sb2NrLnRrMIIBIjANBgkqhkiG
+9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2OZAQ1mdyGlgyiKQjruskIP3TRIop3L/s2DE
+GxTA3EydY9nGiLYTXwQ8h4nq5brNPbhJZRxSlBY7+Yo6eyU0EoGK7DMXA+Vyadto
+V0bHGpLOiJJ3nQmg+WNUBmvXMYKwJbY5YUCu59S+Se8IR5xidwVNG9Ky9Oigkh53
+8laX4CXxExFENPmlP3SZqqIxVWbT1NE9aEed+Kfdsl+CBsSRCicJlbhPEWCWRE+f
+A20wOKoCHFw5S+W1AKmu31Bi3vrm7Ejg9/zVc6xpEtf1wDMz7i7ofd1izbbHnaxx
+W+XlZntzg/FWOWNK9XsoztjRDCtdVetnK1VSX4i01d57e70BSQIDAQABo4GlMIGi
+MB0GA1UdDgQWBBSqQK78EpD/5UgykS9ZtPgJUcWNhTAfBgNVHSMEGDAWgBSqQK78
+EpD/5UgykS9ZtPgJUcWNhTAMBgNVHRMEBTADAQH/MAsGA1UdDwQEAwIFoDAXBgNV
+HREEEDAOggwqLnJib2xvY2sudGswLAYJYIZIAYb4QgENBB8WHU9wZW5TU0wgR2Vu
+ZXJhdGVkIENlcnRpZmljYXRlMA0GCSqGSIb3DQEBBQUAA4IBAQB+wT3aOjQVssuw
+ZJeN1UqixATH2cqf2/DAoS2Ez0k6g08w8o5ucasSsG1zwsk5PtHFUPUTTUj2y6aF
+bDDw+73xEmX5mWu4Oo2bwwwfENDnFmLCWrwr8cQDJcRGIF7KnQzPYEtxE8gYTS3F
+oeqCSXwUehOMODIzljCNmYXVQvpheW7zUB+IjRXyrcpz7SHXrq6OLfpuJew9QEET
+kwA9RGqM4RHnTGeCrZUScS347Vu+Hd/i1fCsDz0RmOvh4ny6e2wg3nkWYnlCvvev
+y5XklEGmr0OCJuZeD6EAUVL5gNNB47FCuA93ybzvRW/yOmODPjY3E2gLu/IEo4L8
+JguAJrKz
+-----END CERTIFICATE-----
+'''
+
+RBLXHUB_SERVER_KEY_PEM = b'''
+-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDY5kBDWZ3IaWDK
+IpCOu6yQg/dNEiincv+zYMQbFMDcTJ1j2caIthNfBDyHierlus09uEllHFKUFjv5
+ijp7JTQSgYrsMxcD5XJp22hXRscaks6IknedCaD5Y1QGa9cxgrAltjlhQK7n1L5J
+7whHnGJ3BU0b0rL06KCSHnfyVpfgJfETEUQ0+aU/dJmqojFVZtPU0T1oR534p92y
+X4IGxJEKJwmVuE8RYJZET58DbTA4qgIcXDlL5bUAqa7fUGLe+ubsSOD3/NVzrGkS
+1/XAMzPuLuh93WLNtsedrHFb5eVme3OD8VY5Y0r1eyjO2NEMK11V62crVVJfiLTV
+3nt7vQFJAgMBAAECggEAIl+K+6FuId6hWidUJWqUlGp1fJ9OFgthfnntWiVV0xPJ
+NZPDpNLGCx7OwOQYd8O81vUnnIB6jcFgS9GeJvnkYLJq47fNA+8OzLvas0oiL5Ho
+bThZAGgQPLWDEWlxtwTxCWjxevoXPeI3LdxVwZOE/zu11pzzg2CCYeW2OI+Ejh7q
+PeZnbukd/1picPznqLW6KAOHh5+OW4Yp6Y43nwePporMbyzeRxGyffuNqjL10ncF
+LrsT2dZqO+y21xlEX4MbTtCXsewb/rB/e3WW3TzRZo8WPKNprvRxOhBxQDc71wQ3
++GcT6WEHsjsjQE1SVxoIL3txoLn3kkWin1LGqnObyQKBgQD//vZYfDcMlV+GgMKk
+ozMS/JpgmKz8kaPYBUT+3k0f74yuTqM8yEdmrP7os/Vk1tUhDQwBvB6DGocSHVns
+4CwnUV51Ldh8Y+bzzJF5RmxlC6BW+66RUs3zkI/l43900189XODB/YXPfA7KhvtJ
+7Bn5xAv/s72sZP1FACukNdET6wKBgQDY5yFYiZG4cw6r2i0HW1sSMPT2qd1ttl8J
+35SkQUh+gpvcVpQsRESUBGihREMYZgBE8SMYh/uL9NoHMd1VGE6a4XZc8EDkmiLf
+NxC+kBEVS/ExPO3WNB2e/rmSs2WZrqp1b077QOtoKwUzwEi7twGuRFZhTQJ3yAjg
+QgTrwB9WmwKBgQDbq0Be67AdRyxicakUt8pC96nNTBXc4Wi0HMl43u9VgSy6AlbG
++KF0dOyEaLAhaMwYgWaVMoUIQUI4hCE/R5n73zHr4XxMOTncaOVIKOsoxhI/sda5
+c1GxOJKSVWZwrFSkhkeDj3Y8dhsHJU8KvuQHVHhrYiRXg41loWDRlzCjIwKBgG4i
+Zhcruzc6DOAL50NOCt8gxrGcrNdxe65qvXHtyB6cuQFXYONdQqkZ1/rSy3LPECHx
+gw2ItpxpFnACzMzRi9Au3UfxojGxZjWLI1BvnI0Aw5ZpxqY2TjgWRSoNN3CidOEu
+RJ9lZmK9PWX6o7PVB+BxyJ6dWLxzcLZWL2N5aTAzAoGBAN6AiVTxny4RX9J3wyMu
+lmavd9uSBbJBwgnSqkTPPZuydyxtNh/x6PPmsv18KFMailM+um3yMldkUVAoXHY1
+6hmfQy1SizmNeGfgtYqnA3jDBr2KBb4ykvozAhx8FMimuPmAjcYa0zj9DZOSjngj
+7kbCojLzRznnBom/lGQrV4YC
+-----END PRIVATE KEY-----
+'''
+
+
+def _embedded_certs_available() -> bool:
+    '''True when both stubs have been filled in with real cert/key data.'''
+    return (
+        b'BEGIN CERTIFICATE' in RBLXHUB_SERVER_CERT_PEM and
+        b'BEGIN' in RBLXHUB_SERVER_KEY_PEM
+    )
 
 
 @functools.cache
 def use_rblxhub_certs() -> bool:
-    '''True if RBLXHUB server cert + key are available for HTTPS.'''
-    return _get_rblxhub_cert_paths() is not None
+    '''True if the embedded RBLXHUB server cert + key stubs have been filled in.'''
+    return _embedded_certs_available()
 
 
 def get_server_cert_paths() -> tuple[str, str] | None:
-    '''Returns (cert_path, key_path) for the HTTPS server, or None to use generated certs.'''
-    return _get_rblxhub_cert_paths()
-
+    '''
+    Writes the embedded PEM blobs to a temp dir and returns (cert_path, key_path)
+    so the ssl module can load them by path. Returns None if stubs are not filled
+    in (falls back to generated certs).
+    '''
+    if not _embedded_certs_available():
+        return None
+    import tempfile as _tempfile
+    tmp = _tempfile.mkdtemp(prefix='rfd-certs-')
+    cert_path = os.path.join(tmp, 'server.crt')
+    key_path  = os.path.join(tmp, 'server.key')
+    with open(cert_path, 'wb') as f:
+        f.write(RBLXHUB_SERVER_CERT_PEM)
+    with open(key_path, 'wb') as f:
+        f.write(RBLXHUB_SERVER_KEY_PEM)
+    return (cert_path, key_path)
 
 def get_ca_pem_bytes() -> bytes:
     '''Returns the CA in PEM format. For v535 with RBLXHUB certs, returns RBLXHUB CA.'''

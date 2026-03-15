@@ -124,6 +124,23 @@ def _(self: web_server_handler) -> bool:
     return True
 
 
+@server_path('/rfd/set-proxy-target')
+def _(self: web_server_handler) -> bool:
+    '''
+    Called by the player routine before launching the Roblox client.
+    Updates the rbolock.tk reverse proxy target so the client's HTTPS
+    traffic is forwarded to the correct remote server IP.
+    Has no effect when the proxy is not running (non-rblxhub-cert mode).
+    '''
+    host = self.query.get('host', '127.0.0.1')
+    port = int(self.query.get('port', str(util.const.RFD_DEFAULT_PORT)))
+    proxy = getattr(self.server, 'proxy', None)
+    if proxy is not None:
+        proxy.set_target(host, port)
+    self.send_data(b'ok')
+    return True
+
+
 @server_path('/game/validate-machine')
 def _(self: web_server_handler) -> bool:
     self.send_json({"success": True})

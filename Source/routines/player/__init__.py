@@ -184,6 +184,16 @@ class obj_type(logic.bin_entry):
                     'rcc_port':     self.rcc_port or util.const.RFD_DEFAULT_PORT,
                 }),
             )
+            # Update the rbolock.tk reverse proxy to forward HTTPS traffic
+            # to the web server the player wants to join. Hosts file stays
+            # permanently as 127.0.0.1 rbolock.tk — no admin needed.
+            self.send_request(
+                '/rfd/set-proxy-target?' +
+                urllib.parse.urlencode({
+                    'host': self.web_host,
+                    'port': self.web_port,
+                }),
+            )
 
         exe_path = self.get_versioned_path('RobloxPlayerBeta.exe')
         if not os.path.isfile(exe_path):

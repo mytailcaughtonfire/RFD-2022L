@@ -88,6 +88,10 @@ class web_server(http.server.ThreadingHTTPServer):
     # Maps client_ip (str) → token (UUID str).
     pending_tokens: dict[str, str]
 
+    # Set by make_server() after the web server is created.
+    # None when not using rblxhub certs (localhost-only mode).
+    proxy: 'web_server_proxy | None'
+
     def __init__(
         self,
         port: int,
@@ -101,6 +105,7 @@ class web_server(http.server.ThreadingHTTPServer):
         self.join_configs = {}
         self.ip_to_token  = {}
         self.pending_tokens = {}
+        self.proxy = None
         self.data_transferer = game_config.data_transferer
         self.storage = game_config.storage
         self.server_mode = server_mode
