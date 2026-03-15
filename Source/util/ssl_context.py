@@ -371,12 +371,54 @@ def _ensure_rbolock_hosts(log_filter) -> None:
             is_error=True,
         )
 
+def _is_ca_already_installed() -> bool:
+    '''
+    Checks if the RFD CA is already present in the Windows Trusted Root store
+    by running certutil -store root and looking for the cert's subject/thumbprint.
+    Avoids re-installing (and re-prompting) on every startup.
+    '''
+    try:
+        # Extract the subject CN from the CA PEM so we can search for it.
+        ca_pem = get_ca_pem_bytes()
+        from cryptography import x509 as _x509
+        from cryptography.hazmat.backends import default_backend as _backend
+        cert = _x509.load_pem_x509_certificate(ca_pem, _backend())
+        cn_attrs = cert.subject.get_attributes_for_oid(
+            _x509.oid.NameOID.COMMON_NAME
+        )
+        if not cn_attrs:
+            return False
+        subject_cn = cn_attrs[0].value  # e.g. "*.rbolock.tk"
+
+        result = subprocess.run(
+            ['certutil', '-store', 'root'],
+            capture_output=True, text=True, timeout=10,
+        )
+        return subject_cn in result.stdout
+    except Exception:
+        return False
+
+
 def install_ca_to_windows_root(log_filter) -> None:
     '''
-    Installs the CA into Windows Trusted Root via certutil.
-    For v535 with RBLXHUB certs, uses RBLXHUB CA. Uses start-process -verb runas.
+    Installs the RFD CA into the Windows Trusted Root store via certutil.
+    - Skipped entirely if already installed (no UAC, no prompt).
+    - Skipped with a stub log on Linux.
+    - Shows a friendly messagebox on Windows before the UAC prompt.
     '''
-    if platform.system() != 'Windows':
+    system = platform.system()
+
+    if system == 'Linux':
+        log_filter.log(
+            text='Linux: CA installation not yet automated. Install manually if needed.',
+            context=logger.log_context.PYTHON_SETUP,
+        )
+        return
+
+    if system != 'Windows':
+        return
+
+    if _is_ca_already_installed():
         return
 
     ca_pem = get_ca_pem_bytes()
@@ -384,16 +426,38 @@ def install_ca_to_windows_root(log_filter) -> None:
     with open(tmp_path, 'wb') as f:
         f.write(ca_pem)
 
+    # Show a friendly messagebox before the UAC prompt.
+    try:
+        import ctypes
+        MB_OK              = 0x00000000
+        MB_ICONINFORMATION = 0x00000040
+        ctypes.windll.user32.MessageBoxW(
+            0,
+            (
+                'RFD needs admin to install a certificate so that the Roblox client '
+                'can trust the local server (bypassing Trust Check failed).\n\n'
+                'This is a self-signed certificate used only for local connections.\n'
+                'You\'ll see a admin prompt next, and you\'ll need to click "Yes" for this to work.\n'
+                'This is a one-time step and the only time admin is needed.'
+            ),
+            'RFD-2022M - Setup',
+            MB_OK | MB_ICONINFORMATION,
+        )
+    except Exception:
+        pass
+
+    log_filter.log(
+        text='Installing CA into Windows root store (UAC prompt incoming)...',
+        context=logger.log_context.PYTHON_SETUP,
+    )
+
     ps_cmd = (
         f'Start-Process -Verb RunAs -FilePath "cmd.exe" '
-        f'-ArgumentList \'/c certutil -addstore root "{tmp_path}" && pause\''
+        f'-ArgumentList \'/c certutil -addstore root "{tmp_path}"\'' 
     )
     try:
-        subprocess.Popen(['powershell', '-NoProfile', '-Command', ps_cmd])
-        log_filter.log(
-            text='UAC prompt: Approve to install CA into Windows root store.',
-            context=logger.log_context.PYTHON_SETUP,
-        )
+        proc = subprocess.Popen(['powershell', '-NoProfile', '-Command', ps_cmd])
+        proc.wait()
     except FileNotFoundError:
         log_filter.log(
             text='powershell not found. Install CA manually: certutil -addstore root "%s"' % tmp_path,
