@@ -419,6 +419,10 @@ def install_ca_to_windows_root(log_filter) -> None:
         return
 
     if _is_ca_already_installed():
+        log_filter.log(
+            text='CA already installed, skipping.',
+            context=logger.log_context.PYTHON_SETUP,
+        )
         return
 
     ca_pem = get_ca_pem_bytes()
@@ -457,7 +461,9 @@ def install_ca_to_windows_root(log_filter) -> None:
     )
     try:
         proc = subprocess.Popen(['powershell', '-NoProfile', '-Command', ps_cmd])
-        proc.wait()
+        proc.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        pass  # UAC timed out or was dismissed — continue anyway
     except FileNotFoundError:
         log_filter.log(
             text='powershell not found. Install CA manually: certutil -addstore root "%s"' % tmp_path,

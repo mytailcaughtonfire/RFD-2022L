@@ -134,10 +134,56 @@ class obj_type(logic.bin_entry):
             str(res.read(), encoding='utf-8'),
         )
 
+    @staticmethod
+    def _is_local_host(host: str) -> bool:
+        return host in ('127.0.0.1', 'localhost', '::1')
+
+    def _start_proxy(self) -> None:
+        '''
+        Starts the rbolock.tk reverse proxy on 127.0.0.1:<web_port>.
+        Only runs when:
+          - using RBLXHUB certs, AND
+          - connecting to a remote host (not localhost/127.0.0.1)
+        The proxy forwards HTTPS traffic to web_host:web_port so the hosts
+        file can permanently stay as 127.0.0.1 rbolock.tk.
+        '''
+        import util.ssl_context as _ssl_ctx
+        if not _ssl_ctx.use_rblxhub_certs():
+            print('[proxy] Not started: not using RBLXHUB certs.', flush=True)
+            return
+        if self._is_local_host(self.web_host):
+            print('[proxy] Not started: connecting to localhost.', flush=True)
+            return
+
+        # Inform the user before starting.
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                (
+                    f'RFD will start a local HTTPS proxy on port {self.web_port}.\n\n'
+                    f'This forwards your Roblox client\'s traffic to {self.web_host}:{self.web_port} '
+                    f'without needing to change your hosts file each time.\n\n'
+                    f'Your hosts file stays permanently as 127.0.0.1 rbolock.tk.'
+                ),
+                'RFD — Proxy starting',
+                0x00000040,  # MB_ICONINFORMATION
+            )
+        except Exception:
+            pass
+
+        from web_server.proxy import RoblockProxy
+        cert_path, key_path = _ssl_ctx.get_server_cert_paths()
+        self._proxy = RoblockProxy(self.web_port, cert_path, key_path)
+        self._proxy.set_target(self.web_host, self.web_port)
+        self._proxy.start()
+        print(f'[proxy] Started on 127.0.0.1:{self.web_port} → {self.web_host}:{self.web_port}', flush=True)
+
     @override
     def bootstrap(self) -> None:
         super().bootstrap()
         time.sleep(self.launch_delay)
+        self._start_proxy()
         self.finalise_user_code()
         self.make_client_popen()
 
@@ -184,16 +230,16 @@ class obj_type(logic.bin_entry):
                     'rcc_port':     self.rcc_port or util.const.RFD_DEFAULT_PORT,
                 }),
             )
-            # Update the rbolock.tk reverse proxy to forward HTTPS traffic
-            # to the web server the player wants to join. Hosts file stays
-            # permanently as 127.0.0.1 rbolock.tk — no admin needed.
-            self.send_request(
-                '/rfd/set-proxy-target?' +
-                urllib.parse.urlencode({
-                    'host': self.web_host,
-                    'port': self.web_port,
-                }),
-            )
+            # Update the rbolock.tk reverse proxy target if it's running.
+            # Only sent when connecting to a remote host.
+            if not self._is_local_host(self.web_host):
+                self.send_request(
+                    '/rfd/set-proxy-target?' +
+                    urllib.parse.urlencode({
+                        'host': self.web_host,
+                        'port': self.web_port,
+                    }),
+                )
 
         exe_path = self.get_versioned_path('RobloxPlayerBeta.exe')
         if not os.path.isfile(exe_path):

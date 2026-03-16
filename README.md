@@ -10,7 +10,7 @@ However, I do not blindly push code, I do take my time to review and see what th
 
 Please check out https://github.com/Windows81/Roblox-Freedom-Distribution to know how to run this project from source.
 
-_
+_Studio is not fully usable, the draggers and selectors do not work._
 
 ## Requirements
 In your _GameConfig.toml_, you'll need to set the version:
@@ -18,8 +18,6 @@ In your _GameConfig.toml_, you'll need to set the version:
 [game_setup]
 roblox_version = '2022'
 ```
-
-When running, make sure to type n to not overwrite (I'll fix this later..)
 
 ## Roadmap
 
@@ -60,6 +58,7 @@ When running, make sure to type n to not overwrite (I'll fix this later..)
 - [ ] Asset Redirection
 - [ ] Tool Loading
 - [x] UserID generation
+- [ ] Datasaving
 - [ ] other stuff
 
 

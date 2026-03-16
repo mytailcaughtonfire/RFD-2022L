@@ -121,6 +121,7 @@ def _(self: web_server_handler) -> bool:
 
     # Real Roblox returns the asset version ID as a plain integer string.
     self.send_data(str(asset_id).encode())
+    print('new texturepack id ' + str(asset_id))
     return True
 
 

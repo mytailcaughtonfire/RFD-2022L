@@ -55,6 +55,52 @@ def _(self: web_server_handler) -> bool:
         return True
     return False
 
+@server_path('/v1/assets/batch', commands={'POST'})
+def _(self: web_server_handler) -> bool:
+    '''
+    Batch asset delivery endpoint used by v535 to fetch multiple assets at once.
+    Request body is gzip-compressed JSON:
+        [{"assetId": 123, "assetType": "Image", "requestId": "0"}, ...]
+    Response mirrors requestId back so the client can match responses to requests,
+    and provides a location URL pointing to our /v1/asset endpoint.
+    '''
+    import gzip as _gzip
+    import json as _json
+ 
+    try:
+        content_length = int(self.headers.get('Content-Length', 0))
+        body = self.rfile.read(content_length) if content_length else b''
+        if self.headers.get('Content-Encoding', '').lower() == 'gzip':
+            body = _gzip.decompress(body)
+        requests_list = _json.loads(body)
+    except Exception:
+        self.send_error(400)
+        return True
+ 
+    if not isinstance(requests_list, list):
+        self.send_error(400)
+        return True
+ 
+    base = self.hostname
+    results = []
+    for item in requests_list:
+        if not isinstance(item, dict):
+            continue
+        asset_id = item.get('assetId') or item.get('assetid')
+        if asset_id is None:
+            continue
+        results.append({
+            'requestId':           item.get('requestId', '0'),
+            'assetId':             int(asset_id),
+            'location':            f'{base}/v1/asset?id={asset_id}',
+            'requestIdType':       'AltAssetId',
+            'isHashDynamic':       False,
+            'isCopyrightProtected': False,
+            'isArchived':          False,
+        })
+ 
+    self.send_json(results)
+    return True
 
 @server_path('/ownership/hasasset', commands={'GET'})
 def _(self: web_server_handler) -> bool:
