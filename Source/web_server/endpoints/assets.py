@@ -92,31 +92,9 @@ def _(self: web_server_handler) -> bool:
     # Also check the query string — the batch endpoint encodes the accept
     # format as ?accept=rbx-format/color_dxt etc. in the location URL.
     accept = self.headers.get('Accept')
-    if accept == 'ktx/dxt':
-        self.send_error(404)
-        return True
     accept_query = self.query.get('accept')
     if accept_query and (accept is None or accept == '*/*'):
         accept = accept_query
-
-    # For DXT TexturePack requests, we need to check the local cache first
-    # regardless of the accept header — DXT path in get_asset bypasses the
-    # file cache and goes straight to CDN, which won't have local IDs.
-    # So we load the file directly, check if it's a TexturePack XML, and
-    # resolve it ourselves before falling through to get_asset.
-    if accept and accept in _DXT_TO_TEXTUREPACK_CHANNELS:
-        asset_path = asset_cache.get_asset_path(asset_id)
-        local_data = asset_cache._load_file(asset_path)
-        if local_data is not None:
-            is_texturepack = (
-                b'<texturepack_version>' in local_data or
-                b'texturepack' in local_data[:256].lower()
-            )
-            if is_texturepack:
-                dxt_data = _resolve_texturepack_dxt(local_data, accept, asset_cache)
-                if dxt_data is not None:
-                    self.send_data(dxt_data, content_type='application/octet-stream')
-                    return True
 
     asset = asset_cache.get_asset(
         asset_id,
@@ -126,19 +104,6 @@ def _(self: web_server_handler) -> bool:
 
     if isinstance(asset, returns.ret_data):
         data = asset.data
-
-        # Also handle the case where get_asset returned the XML
-        # (e.g. cache hit before DXT bypass) with a DXT accept header.
-        if accept and accept in _DXT_TO_TEXTUREPACK_CHANNELS:
-            is_texturepack = (
-                b'<texturepack_version>' in data or
-                b'texturepack' in data[:256].lower()
-            )
-            if is_texturepack:
-                dxt_data = _resolve_texturepack_dxt(data, accept, asset_cache)
-                if dxt_data is not None:
-                    self.send_data(dxt_data, content_type='application/octet-stream')
-                    return True
 
         # Detect content type from magic bytes so the PBR pipeline
         # and other clients get the correct Content-Type header.
