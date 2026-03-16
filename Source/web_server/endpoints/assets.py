@@ -2,6 +2,44 @@ from web_server._logic import web_server_handler, server_path
 import assets.returns as returns
 import util.const
 
+# Maps DXT accept header → TexturePack XML element name
+_DXT_TO_TEXTUREPACK_CHANNEL = {
+    'rbx-format/color_dxt': 'color',
+    'rbx-format/norm_dxt':  'normal',
+    'rbx-format/spec_dxt':  'roughness',
+    'ktx/dxt':              'color',  # fallback for generic DXT
+}
+
+
+def _resolve_texturepack_dxt(
+    data: bytes,
+    accept: str,
+    asset_cache,
+) -> bytes | None:
+    '''
+    Given a TexturePack XML blob and a DXT accept header, parse the XML,
+    find the texture ID for the requested channel, then fetch that texture
+    from CDN with the DXT accept header forwarded.
+    '''
+    import xml.etree.ElementTree as _ET
+    channel = _DXT_TO_TEXTUREPACK_CHANNEL.get(accept)
+    if channel is None:
+        return None
+    try:
+        root = _ET.fromstring(data.decode('utf-8', errors='replace'))
+        el = root.find(channel)
+        if el is None or not el.text:
+            return None
+        texture_id = int(el.text.strip())
+    except Exception:
+        return None
+
+    # Fetch the individual texture from CDN with the DXT accept header.
+    result = asset_cache.get_asset(texture_id, bypass_blocklist=True, accept=accept)
+    if isinstance(result, returns.ret_data):
+        return result.data
+    return None
+
 #@server_path("/v2/assets")
 #@server_path("/v2/assets/")
 
@@ -36,7 +74,12 @@ def _(self: web_server_handler) -> bool:
     # Forward the Accept header so DXT texture requests (rbx-format/spec_dxt,
     # rbx-format/norm_dxt, etc.) get the right format from Roblox CDN,
     # matching RBLXHUB's asset.php special-case handling.
+    # Also check the query string — the batch endpoint encodes the accept
+    # format as ?accept=rbx-format/color_dxt etc. in the location URL.
     accept = self.headers.get('Accept')
+    accept_query = self.query.get('accept')
+    if accept_query and (accept is None or accept == '*/*'):
+        accept = accept_query
 
     asset = asset_cache.get_asset(
         asset_id,
@@ -45,7 +88,35 @@ def _(self: web_server_handler) -> bool:
     )
 
     if isinstance(asset, returns.ret_data):
-        self.send_data(asset.data)
+        data = asset.data
+
+        # If this is a TexturePack XML being requested with a DXT accept header,
+        # parse the XML to find the real texture ID for this channel and fetch
+        # that texture from CDN with the DXT header — mirroring what real Roblox
+        # CDN does server-side when serving TexturePack assets.
+        if accept and accept in _DXT_TO_TEXTUREPACK_CHANNEL:
+            is_texturepack = (
+                b'<texturepack_version>' in data or
+                b'texturepack' in data[:256].lower()
+            )
+            if is_texturepack:
+                dxt_data = _resolve_texturepack_dxt(data, accept, asset_cache)
+                if dxt_data is not None:
+                    self.send_data(dxt_data, content_type='application/octet-stream')
+                    return True
+                # If resolution failed, fall through to serve the XML as-is.
+
+        # Detect content type from magic bytes so the PBR pipeline
+        # and other clients get the correct Content-Type header.
+        if data[:8] == b'\x89PNG\r\n\x1a\n':
+            content_type = 'image/png'
+        elif data[:2] == b'\xff\xd8':
+            content_type = 'image/jpeg'
+        elif data[:4] in (b'<rbl', b'<rob'):
+            content_type = 'application/xml'
+        else:
+            content_type = 'application/octet-stream'
+        self.send_data(data, content_type=content_type)
         return True
     elif isinstance(asset, returns.ret_none):
         self.send_error(404)
@@ -66,21 +137,41 @@ def _(self: web_server_handler) -> bool:
     '''
     import gzip as _gzip
     import json as _json
- 
+    import os as _os
+    import time as _time
+
     try:
         content_length = int(self.headers.get('Content-Length', 0))
         body = self.rfile.read(content_length) if content_length else b''
+
+        # Dump raw + decompressed body and headers for each request to a
+        # numbered file so we can inspect all batch calls without overwriting.
+        dump_dir = _os.path.join(_os.path.dirname(__file__), 'batch_dumps')
+        _os.makedirs(dump_dir, exist_ok=True)
+        stamp = f'{_time.time():.3f}_{self.headers.get("User-Agent", "unknown").split("/")[0]}'
+        with open(_os.path.join(dump_dir, f'{stamp}.bin'), 'wb') as _f:
+            _f.write(body)
+        with open(_os.path.join(dump_dir, f'{stamp}.headers.txt'), 'w', encoding='utf-8') as _f:
+            for k, v in self.headers.items():
+                _f.write(f'{k}: {v}\n')
+
         if self.headers.get('Content-Encoding', '').lower() == 'gzip':
             body = _gzip.decompress(body)
+
+        with open(_os.path.join(dump_dir, f'{stamp}.json'), 'w', encoding='utf-8') as _f:
+            _f.write(body.decode('utf-8', errors='replace'))
+
+        print(f'[batch] Dumped to {dump_dir}/{stamp}.*', flush=True)
+
         requests_list = _json.loads(body)
     except Exception:
         self.send_error(400)
         return True
- 
+
     if not isinstance(requests_list, list):
         self.send_error(400)
         return True
- 
+
     base = self.hostname
     results = []
     for item in requests_list:
@@ -89,16 +180,23 @@ def _(self: web_server_handler) -> bool:
         asset_id = item.get('assetId') or item.get('assetid')
         if asset_id is None:
             continue
+        # Pass the accept format as a query param so /v1/asset can forward
+        # the correct Accept header to CDN for DXT texture requests.
+        accept_fmt = item.get('accept', '')
+        if accept_fmt:
+            location = f'{base}/v1/asset?id={asset_id}&accept={accept_fmt}'
+        else:
+            location = f'{base}/v1/asset?id={asset_id}'
         results.append({
             'requestId':           item.get('requestId', '0'),
             'assetId':             int(asset_id),
-            'location':            f'{base}/v1/asset?id={asset_id}',
+            'location':            location,
             'requestIdType':       'AltAssetId',
             'isHashDynamic':       False,
             'isCopyrightProtected': False,
             'isArchived':          False,
         })
- 
+
     self.send_json(results)
     return True
 

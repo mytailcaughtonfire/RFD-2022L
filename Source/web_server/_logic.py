@@ -184,6 +184,7 @@ class web_server_handler(http.server.BaseHTTPRequestHandler):
     default_request_version = "HTTP/1.1"
     request: socket.socket
     server: web_server
+    
 
     @functools.cache
     def read_content(self) -> bytes:
@@ -350,10 +351,12 @@ class web_server_handler(http.server.BaseHTTPRequestHandler):
         except (IndexError, ValueError, TypeError):
             status = None
 
+        ua = self.headers.get('User-Agent', '-')
         log_filter.log(
             (
-                "%s{ %-5s}%s %s"
+                "[%-20s] %s{ %-5s}%s %s"
             ) % (
+                ua[:20],
                 log_filter.bcolors.BOLD,
                 self.command,
                 log_filter.bcolors.ENDC,
