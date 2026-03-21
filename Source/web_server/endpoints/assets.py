@@ -2,13 +2,17 @@ from web_server._logic import web_server_handler, server_path
 import assets.returns as returns
 import util.const
 
+# Toggle: serve KTX/DXT to Studio via TexturePack resolver.
+# False = Studio gets plain XML (handles PBR itself, recommended).
+# True  = Studio also gets KTX (experimental).
+STUDIO_USE_KTX: bool = False
+
 # Maps DXT accept header → ordered list of TexturePack XML element names to try.
-# spec_dxt tries metalness first (PBR metallic workflow), then roughness as fallback.
 _DXT_TO_TEXTUREPACK_CHANNELS = {
     'rbx-format/color_dxt': ['color'],
     'rbx-format/norm_dxt':  ['normal'],
     'rbx-format/spec_dxt':  ['roughness', 'metalness'],
-    'ktx/dxt':              ['color', 'normal', 'metalness', 'roughness'],
+    #'ktx/dxt':              ['color', 'normal', 'metalness', 'roughness'],
 }
 
 
@@ -47,11 +51,15 @@ def _resolve_texturepack_dxt(
         return None
 
     print(f'[texturepack] {accept} → texture_id={texture_id}', flush=True)
-    # Fetch the individual texture from CDN with the DXT accept header.
-    result = asset_cache.get_asset(texture_id, bypass_blocklist=True, accept=accept)
-    if isinstance(result, returns.ret_data):
-        print(f"[texturepack] {accept} fetched {len(result.data)} bytes, magic={result.data[:4]}", flush=True)
-        return result.data
+    # Use KTX cache (id-ktx files). Downloads from CDN if not cached.
+    # Normalize spec_dxt to ktx/dxt for CDN fetch
+    #fetch_accept = 'ktx/dxt' if accept == 'rbx-format/spec_dxt' else accept
+    #data = asset_cache.get_ktx_asset(texture_id, fetch_accept)
+    data = asset_cache.get_ktx_asset(texture_id, accept)
+    if data is not None:
+        kb = len(data) / 1024
+        print(f'[texturepack] serving id={texture_id} accept={accept} size={kb:.1f}KB magic={data[:4]}', flush=True)
+        return data
     print(f'[texturepack] CDN returned nothing for {texture_id} with {accept}', flush=True)
     return None
 
@@ -95,6 +103,26 @@ def _(self: web_server_handler) -> bool:
     accept_query = self.query.get('accept')
     if accept_query and (accept is None or accept == '*/*'):
         accept = accept_query
+
+    is_studio = 'RobloxStudio' in (self.headers.get('User-Agent') or '')
+
+    # For Studio with STUDIO_USE_KTX=False: strip DXT accept so Studio gets
+    # plain XML and handles PBR itself (recommended — Studio works this way).
+    if is_studio and not STUDIO_USE_KTX and accept and accept in _DXT_TO_TEXTUREPACK_CHANNELS:
+        accept = None
+
+    # TexturePack DXT resolver: load XML from cache, resolve to texture ID, serve KTX.
+    print(f'[dxt check] id={asset_id} accept={accept} is_studio={is_studio}', flush=True)
+    if accept and accept in _DXT_TO_TEXTUREPACK_CHANNELS:
+        asset_path = asset_cache.get_asset_path(asset_id)
+        local_data = asset_cache._load_file(asset_path)
+        if local_data is not None and b'<texturepack_version>' in local_data[:64]:
+            dxt_data = _resolve_texturepack_dxt(local_data, accept, asset_cache)
+            if dxt_data is not None:
+                kb = len(dxt_data) / 1024
+                print(f'[asset] sending TexturePack DXT id={asset_id} accept={accept} size={kb:.1f}KB magic={dxt_data[:4]}', flush=True)
+                self.send_data(dxt_data, content_type='application/octet-stream')
+                return True
 
     asset = asset_cache.get_asset(
         asset_id,

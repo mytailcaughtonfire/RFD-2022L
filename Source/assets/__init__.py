@@ -61,6 +61,20 @@ class asseter:
                 os.makedirs(dir_path)
         else:
             os.makedirs(dir_path)
+    
+    def get_ktx_path(self, asset_id: int, accept: str) -> str:
+        safe_accept = accept.replace('/', '_').replace('\\', '_')
+        return self.get_asset_path(f'{asset_id}-{safe_accept}')
+    
+    def get_ktx_asset(self, asset_id: int, accept: str) -> bytes | None:
+        ktx_path = self.get_ktx_path(asset_id, accept)   # ← now passes accept
+        cached = self._load_file(ktx_path)
+        if cached is not None:
+           return cached
+        data = self._load_online_asset(asset_id, accept=accept)
+        if data is not None:
+            self._save_file(ktx_path, data)
+        return data
 
     @functools.cache
     def get_asset_path(self, asset_id: int | str) -> str:
@@ -92,10 +106,11 @@ class asseter:
 
     def _save_file(self, path: str, data: bytes) -> None:
         try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'wb') as f:
                 f.write(data)
-        except OSError:  # Might occur when the asset iden is too long.
-            pass
+        except OSError as e:
+            print(f'Failed to save {path}: {e}', flush=True)
 
     def _load_online_asset(self, asset_id: int, accept: str | None = None) -> bytes | None:
         # DXT texture requests must be forwarded with the Accept header and
@@ -223,10 +238,12 @@ class asseter:
         if not bypass_blocklist and self.is_blocklisted(asset_id):
             returns.construct(error='Asset is blocklisted.')
 
-        # DXT texture requests bypass the file cache entirely —
-        # the cached file is the standard format, not DXT-compressed.
+        # DXT texture requests use the KTX cache (id-ktx files).
         if accept is not None and accept in _DXT_ACCEPT_HEADERS:
-            return self._fetch_asset(asset_id, accept=accept)
+            if isinstance(asset_id, int):
+                data = self.get_ktx_asset(asset_id, accept)
+                return returns.construct(data=data)
+            return returns.construct()
 
         asset_path = self.get_asset_path(asset_id)
         local_data = self._load_file(asset_path)
