@@ -61,16 +61,22 @@ class asseter:
                 os.makedirs(dir_path)
         else:
             os.makedirs(dir_path)
-    
-    def get_ktx_path(self, asset_id: int, accept: str) -> str:
-        safe_accept = accept.replace('/', '_').replace('\\', '_')
-        return self.get_asset_path(f'{asset_id}-{safe_accept}')
+
+    def get_ktx_asset_path(self, asset_id: int) -> str:
+        '''Returns the cache path for the KTX variant of an asset (e.g. "10564930582-ktx").'''
+        return self.get_asset_path(str(asset_id) + '-ktx')
     
     def get_ktx_asset(self, asset_id: int, accept: str) -> bytes | None:
-        ktx_path = self.get_ktx_path(asset_id, accept)   # ← now passes accept
+        '''
+        Returns KTX/DXT data for the given asset ID and accept header.
+        Checks the KTX cache first (id-ktx), downloads from CDN if missing,
+        saves to cache, then returns the data.
+        '''
+        ktx_path = self.get_ktx_asset_path(asset_id)
         cached = self._load_file(ktx_path)
         if cached is not None:
-           return cached
+            return cached
+        # Not cached — fetch from CDN with the DXT accept header.
         data = self._load_online_asset(asset_id, accept=accept)
         if data is not None:
             self._save_file(ktx_path, data)
@@ -106,11 +112,10 @@ class asseter:
 
     def _save_file(self, path: str, data: bytes) -> None:
         try:
-            os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'wb') as f:
                 f.write(data)
-        except OSError as e:
-            print(f'Failed to save {path}: {e}', flush=True)
+        except OSError:  # Might occur when the asset iden is too long.
+            pass
 
     def _load_online_asset(self, asset_id: int, accept: str | None = None) -> bytes | None:
         # DXT texture requests must be forwarded with the Accept header and
@@ -207,18 +212,7 @@ class asseter:
         else:
             return returns.construct()
 
-    def _fetch_asset(self, asset_id: int | str, accept: str | None = None) -> returns.base_type:
-        # Check local cache first — but NOT for DXT requests, because the cached
-        # file is the standard PNG format. Serving a cached PNG as DXT would
-        # corrupt the PBR pipeline. Local TexturePack XMLs uploaded via
-        # Data/Upload.ashx are safe to serve from cache regardless — they are
-        # never DXT themselves, the resolver handles their DXT conversion.
-        if accept not in _DXT_ACCEPT_HEADERS:
-            asset_path = self.get_asset_path(asset_id)
-            local_data = self._load_file(asset_path)
-            if local_data is not None:
-                return returns.construct(data=local_data)
-
+    def _fetch_asset(self, asset_id: int | str) -> returns.base_type:
         redirect_info = self.redirect_func(asset_id)
         if redirect_info is not None:
             return self._load_redir_asset(asset_id=asset_id, redirect=redirect_info)
@@ -226,7 +220,7 @@ class asseter:
         if isinstance(asset_id, str):
             remote_data = self._load_asset_str(asset_id)
         else:
-            remote_data = self._load_asset_num(asset_id, accept=accept)
+            remote_data = self._load_asset_num(asset_id)
         return returns.construct(data=remote_data)
 
     def get_asset(
@@ -238,11 +232,12 @@ class asseter:
         if not bypass_blocklist and self.is_blocklisted(asset_id):
             returns.construct(error='Asset is blocklisted.')
 
-        # DXT texture requests use the KTX cache (id-ktx files).
+        # DXT texture requests get assets with a -ktx suffix.
         if accept is not None and accept in _DXT_ACCEPT_HEADERS:
             if isinstance(asset_id, int):
                 data = self.get_ktx_asset(asset_id, accept)
                 return returns.construct(data=data)
+            print(f'[dxt] couldnt get a ktx asset for asset_id={asset_id} accept={accept}')
             return returns.construct()
 
         asset_path = self.get_asset_path(asset_id)
@@ -250,7 +245,7 @@ class asseter:
         if local_data is not None:
             return returns.construct(data=local_data)
 
-        result_data = self._fetch_asset(asset_id, accept=accept)
+        result_data = self._fetch_asset(asset_id)
         if isinstance(result_data, returns.ret_data):
             self._save_file(asset_path, result_data.data)
 
