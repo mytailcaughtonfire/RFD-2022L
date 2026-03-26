@@ -62,21 +62,18 @@ class asseter:
         else:
             os.makedirs(dir_path)
 
-    def get_ktx_asset_path(self, asset_id: int) -> str:
-        '''Returns the cache path for the KTX variant of an asset (e.g. "10564930582-ktx").'''
-        return self.get_asset_path(str(asset_id) + '-ktx')
-    
+    def get_ktx_asset_path(self, asset_id: int, accept: str = '') -> str:
+        # Sanitize accept header into a safe filename suffix
+        # e.g. 'rbx-format/color_dxt' -> 'color_dxt'
+        suffix = accept.replace('rbx-format/', '').replace('/', '_').replace('*', 'any')
+        key = f'{asset_id}-ktx-{suffix}' if suffix else f'{asset_id}-ktx'
+        return self.get_asset_path(key)
+
     def get_ktx_asset(self, asset_id: int, accept: str) -> bytes | None:
-        '''
-        Returns KTX/DXT data for the given asset ID and accept header.
-        Checks the KTX cache first (id-ktx), downloads from CDN if missing,
-        saves to cache, then returns the data.
-        '''
-        ktx_path = self.get_ktx_asset_path(asset_id)
+        ktx_path = self.get_ktx_asset_path(asset_id, accept)  # now accept-aware
         cached = self._load_file(ktx_path)
         if cached is not None:
             return cached
-        # Not cached — fetch from CDN with the DXT accept header.
         data = self._load_online_asset(asset_id, accept=accept)
         if data is not None:
             self._save_file(ktx_path, data)
