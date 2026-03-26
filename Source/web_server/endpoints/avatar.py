@@ -178,10 +178,10 @@ def _(self: web_server_handler) -> bool:
     })
     return True
 
-@server_path('/v1/game-start-info', versions={versions.rōblox.v535})
-@server_path('/v1.1/game-start-info', versions={versions.rōblox.v535})
+@server_path('/v1/game-start-info', versions={versions.rōblox.v554})
+@server_path('/v1.1/game-start-info', versions={versions.rōblox.v554})
 def _(self: web_server_handler) -> bool:
-    '''Avatar type and scale configuration for 2022M.'''
+    '''Avatar type and scale configuration for 2022L.'''
     self.send_json({
         'gameAvatarType': 'PlayerChoice',
         'allowCustomAnimations': 'True',

@@ -191,8 +191,8 @@ class obj_type(logic.bin_entry):
         base_url = self.get_base_url()
         version = self.retr_version()
 
-        if version == util.versions.rōblox.v535: # note, join_url isn't passed
-            # 2022M uses a direct JSON joinScript endpoint instead of the two-step
+        if version == util.versions.rōblox.v554: # note, join_url isn't passed
+            # 2022L uses a direct JSON joinScript endpoint instead of the two-step
             # PlaceLauncher → join.ashx flow used by older versions.
             join_url = f'{base_url}/game/PlaceLaunch22.ashx?' + urllib.parse.urlencode({
                 'MachineAddress': self.rcc_host,
@@ -214,11 +214,11 @@ class obj_type(logic.bin_entry):
                 }.items() if v}
             )
 
-        # v535: generate a unique token, register join params with the web server,
+        # v554: generate a unique token, register join params with the web server,
         # then pass the token as -t so /v1/authentication-ticket/redeem can
         # associate this client's IP with its join config for /v1/join-game.
         join_token = '1'
-        if version == util.versions.rōblox.v535:
+        if version == util.versions.rōblox.v554:
             join_token = str(uuid.uuid4())
             self.send_request(
                 '/rfd/player-join-config?' +
@@ -250,8 +250,8 @@ class obj_type(logic.bin_entry):
             exe_path,
             (
                 '-a', f'{base_url}/login/negotiate.ashx',
-                '-j', join_url, # this doesn't get passed to the webserver in v535 unlike v463. why??
-                # v535: the UUID token lets the redeem handler look up this
+                '-j', join_url, # this doesn't get passed to the webserver in v554 unlike v463. why??
+                # v554: the UUID token lets the redeem handler look up this
                 # client's join config by IP in self.server.join_configs.
                 # Other versions: plain '1' (ticket unused by RFD).
                 '-t', join_token,

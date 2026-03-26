@@ -87,7 +87,7 @@ def subparse(
         type=str,
         nargs='?',
         default=None,
-        help='If --run_client is passed in, determines the display name for the player which joins the server.\n Only applicable for 2022M. Not required, but useful if needed.',
+        help='If --run_client is passed in, determines the display name for the player which joins the server.\n Only applicable for 2022L. Not required, but useful if needed.',
     )
 
     log_group = subparser.add_mutually_exclusive_group()
@@ -223,7 +223,7 @@ def _(
 
         if not args_ns.skip_rcc:
             version = game_config.game_setup.roblox_version
-            if version == util.versions.rōblox.v535:
+            if version == util.versions.rōblox.v554:
                 rcc_routine_args.add(
                     studio_server.obj_type(
                         web_host='localhost',

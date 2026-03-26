@@ -1,5 +1,5 @@
 '''
-SSL/TLS context for RFD's HTTPS web server. For v535 (2022M), uses RBLXHUB's
+SSL/TLS context for RFD's HTTPS web server. For v554 (2022L), uses RBLXHUB's
 certificates from webserver/apache/certificats/ when available. The RBLXHUB CA
 is installed to the Windows root store via certutil (like main.go setup_certificate).
 '''
@@ -15,7 +15,7 @@ import trustme
 import tempfile
 
 
-# RBLXHUB CA from main.go - installed to Windows root store for v535 trust
+# RBLXHUB CA from main.go - installed to Windows root store for v554 trust
 RBLXHUB_CA_PEM = b'''-----BEGIN CERTIFICATE-----
 MIIFDzCCAvegAwIBAgIUWC9sZdzGHiz0aRS/XC25bxtdv88wDQYJKoZIhvcNAQEL
 BQAwFzEVMBMGA1UEAwwMKi5yYm9sb2NrLnRrMB4XDTI1MDYxNjIwMzUyN1oXDTM1
@@ -142,7 +142,7 @@ def get_server_cert_paths() -> tuple[str, str] | None:
     return (cert_path, key_path)
 
 def get_ca_pem_bytes() -> bytes:
-    '''Returns the CA in PEM format. For v535 with RBLXHUB certs, returns RBLXHUB CA.'''
+    '''Returns the CA in PEM format. For v554 with RBLXHUB certs, returns RBLXHUB CA.'''
     if use_rblxhub_certs():
         return RBLXHUB_CA_PEM
     return _get_or_create_persistent_ca()[0]
@@ -345,7 +345,7 @@ def _ensure_rbolock_hosts(log_filter) -> None:
                 'The following lines will be added:\n'
                 f'{missing_display}\n\n'
             ),
-            'RFD-2022M - Setup',
+            'RFD-2022L - Setup',
             MB_OK | MB_ICONINFORMATION,
         )
     except Exception:
@@ -444,7 +444,7 @@ def install_ca_to_windows_root(log_filter) -> None:
                 'You\'ll see a admin prompt next, and you\'ll need to click "Yes" for this to work.\n'
                 'This is a one-time step and the only time admin is needed.'
             ),
-            'RFD-2022M - Setup',
+            'RFD-2022L - Setup',
             MB_OK | MB_ICONINFORMATION,
         )
     except Exception:

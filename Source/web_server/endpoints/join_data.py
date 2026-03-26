@@ -209,10 +209,10 @@ def _(self: web_server_handler) -> bool:
     }, prefix=b'--rbxsig2%0%\r\n')
     return True
 
-@server_path('/v1/join-game', versions={versions.rōblox.v535})
+@server_path('/v1/join-game', versions={versions.rōblox.v554})
 def _(self: web_server_handler) -> bool:
     '''
-    2022M API join endpoint (RBLXHUB-style).
+    2022L API join endpoint (RBLXHUB-style).
     Returns {"status": 2, "message": null, "joinScript": {...}}.
     '''
     query_args: dict[str, str] = json.loads(
@@ -338,7 +338,7 @@ def _(self: web_server_handler) -> bool:
     })
     return True
 
-@server_path(r'/v2/assets/(\d+)/details', regex=True, versions={versions.rōblox.v535})
+@server_path(r'/v2/assets/(\d+)/details', regex=True, versions={versions.rōblox.v554})
 def _(self: web_server_handler, match) -> bool:
     asset_id = int(match.group(1))
     #asset_id = int(self.query['assetId'])

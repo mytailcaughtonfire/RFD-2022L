@@ -1,6 +1,6 @@
 <h1 align="center"><img src="/Assets/Logo.png" height="20px"/> Rōblox: Freedom Distribution <img src="/Assets/Logo.png" height="20px"/></h1>
 
-_This is a fork of Roblox Freedom Distribution that aims to add in a December 8th, 2022 Rōblox Studio and Client!_
+_This is a fork of Roblox Freedom Distribution that aims to add in a (v554,v555) December 8th, 2022 Rōblox Studio and Client!_
 
 ⚠ This is made with the use of LLMs! 
 

@@ -23,7 +23,7 @@ import logger
 @dataclasses.dataclass(kw_only=True, unsafe_hash=True)
 class obj_type(logic.bin_entry, logic.gameconfig_entry):
     '''
-    Routine entry for v535 (2022M).  Launches Studio's Server.exe as the game
+    Routine entry for v554 (2022L).  Launches Studio's Server.exe as the game
     server instead of RCCService.exe, which was not leaked past 2021.
     Server.exe lives inside the Studio folder and accepts a local place file
     directly via -task StartServer, so no GameServer.json is needed.
@@ -298,7 +298,7 @@ class obj_type(logic.bin_entry, logic.gameconfig_entry):
         self.logger.log(
             (
                 f"{self.logger.bcolors.BOLD}[UDP %d]{self.logger.bcolors.ENDC}: "
-                "initialising Rōblox Studio Server (2022M)"
+                "initialising Rōblox Studio Server (2022L)"
             ) % (self.rcc_port,),
             context=logger.log_context.PYTHON_SETUP,
         )

@@ -33,13 +33,13 @@ class obj_type(logic.bin_entry, logic.loggable_entry, logic.gameconfig_entry):
 
     @override
     def get_base_url(self) -> str:
-        if self.retr_version() == util.versions.rōblox.v535 and util.ssl_context.use_rblxhub_certs():
+        if self.retr_version() == util.versions.rōblox.v554 and util.ssl_context.use_rblxhub_certs():
             return f'https://www.rbolock.tk:{self.web_port}'
         return f'https://{self.web_host}:{self.web_port}'
 
     @override
     def get_app_base_url(self) -> str:
-        if self.retr_version() == util.versions.rōblox.v535 and util.ssl_context.use_rblxhub_certs():
+        if self.retr_version() == util.versions.rōblox.v554 and util.ssl_context.use_rblxhub_certs():
             return f'https://www.rbolock.tk:{self.web_port}'
         return f'https://localhost:{self.web_port}'
 
@@ -68,7 +68,7 @@ class obj_type(logic.bin_entry, logic.loggable_entry, logic.gameconfig_entry):
     @override
     def update_fvars(self) -> None:
         super().update_fvars()
-        if self.retr_version() != util.versions.rōblox.v535:
+        if self.retr_version() != util.versions.rōblox.v554:
             return
         path = self.get_versioned_path('ClientSettings', 'ClientAppSettings.json')
         with open(path, 'r', encoding='utf-8') as f:
@@ -80,11 +80,11 @@ class obj_type(logic.bin_entry, logic.loggable_entry, logic.gameconfig_entry):
     def patch_cacert_pem(self) -> None:
         '''
         Appends the RFD CA root certificate to Studio's ssl/cacert.pem so that
-        libcurl-based requests trust our HTTPS server. For v535, we also install
+        libcurl-based requests trust our HTTPS server. For v554, we also install
         the CA to the Windows root store (see install_ca_to_windows_root) so
         that Studio's content provider trusts asset fetches.
         '''
-        if self.retr_version() != util.versions.rōblox.v535:
+        if self.retr_version() != util.versions.rōblox.v554:
             return
         ca_pem = util.ssl_context.get_ca_pem_bytes()
         cacert_path = self.get_versioned_path('ssl', 'cacert.pem')
@@ -128,7 +128,7 @@ class obj_type(logic.bin_entry, logic.loggable_entry, logic.gameconfig_entry):
         #self.make_aux_directories()
         # why did cursor remove these? need to check later. 
         # TODO: check
-        if self.retr_version() == util.versions.rōblox.v535:
+        if self.retr_version() == util.versions.rōblox.v554:
             util.ssl_context.install_ca_to_windows_root(self.logger)
             if util.ssl_context.use_rblxhub_certs():
                 util.ssl_context._ensure_rbolock_hosts(self.logger)

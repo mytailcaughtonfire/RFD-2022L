@@ -7,7 +7,7 @@ import enum
 class rōblox(enum.Enum):
     v347 = ('2018M', '2018', 'v348',)
     v463 = ('2021E', '2021',)
-    v535 = ('2022M', '2022',)
+    v554 = ('2022L', '2022',)
 
     def get_number(self) -> int:
         return int(self.name[1:])

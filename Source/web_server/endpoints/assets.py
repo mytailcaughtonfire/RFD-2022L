@@ -181,7 +181,7 @@ def _(self: web_server_handler) -> bool:
 @server_path('/v1/assets/batch', commands={'POST'})
 def _(self: web_server_handler) -> bool:
     '''
-    Batch asset delivery endpoint used by v535 to fetch multiple assets at once.
+    Batch asset delivery endpoint used by v554 to fetch multiple assets at once.
     Request body is gzip-compressed JSON:
         [{"assetId": 123, "assetType": "Image", "requestId": "0"}, ...]
     Response mirrors requestId back so the client can match responses to requests,

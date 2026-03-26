@@ -56,7 +56,7 @@ def _(
         type=str,
         nargs='*',
         default=[],
-        help='Determines the display name for the player which joins the server.\n Only applicable for 2022M. Not required, but useful if needed.',
+        help='Determines the display name for the player which joins the server.\n Only applicable for 2022L. Not required, but useful if needed.',
     )
     subparser.add_argument(
         '--quiet', '-q',

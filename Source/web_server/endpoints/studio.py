@@ -136,7 +136,7 @@ def _(self: web_server_handler, match) -> bool:
     })
     return True
 
-@server_path('/studio-login/v1/login', versions={versions.rōblox.v535})
+@server_path('/studio-login/v1/login', versions={versions.rōblox.v554})
 def _(self: web_server_handler) -> bool:
     self.send_response(200)
     self.send_header('set-cookie', _make_cookie('.ROBLOSECURITY', _ROBLOSECURITY))
@@ -158,7 +158,7 @@ def _(self: web_server_handler) -> bool:
     }, status=None)
     return True
 
-@server_path('/studio-open-place/v1/openplace', versions={versions.rōblox.v535})
+@server_path('/studio-open-place/v1/openplace', versions={versions.rōblox.v554})
 def _(self: web_server_handler) -> bool:
     '''
     Studio "Open place" endpoint. Returns place/universe metadata for placeId.
@@ -188,16 +188,16 @@ def _(self: web_server_handler) -> bool:
     return True
 
 
-@server_path('/game/GetCurrentUser.ashx', versions={versions.rōblox.v535})
+@server_path('/game/GetCurrentUser.ashx', versions={versions.rōblox.v554})
 def _(self: web_server_handler) -> bool:
     self.send_json(1)
     return True
 
 
-@server_path('/my/settings/json', versions={versions.rōblox.v535})
+@server_path('/my/settings/json', versions={versions.rōblox.v554})
 def _(self: web_server_handler) -> bool:
     '''
-    2022M user settings endpoint.  Returns account metadata that Studio
+    2022L user settings endpoint.  Returns account metadata that Studio
     expects. Ported from RBLXHUB my/settings/json.php.
     '''
     base = self.hostname
@@ -288,10 +288,10 @@ def _(self: web_server_handler) -> bool:
     return True
 
 
-@server_path('/My', versions={versions.rōblox.v535})
-@server_path('/My/', versions={versions.rōblox.v535})
+@server_path('/My', versions={versions.rōblox.v554})
+@server_path('/My/', versions={versions.rōblox.v554})
 def _(self: web_server_handler) -> bool:
-    '''2022M My base. Placeholder for RBLXHUB compatibility.'''
+    '''2022L My base. Placeholder for RBLXHUB compatibility.'''
     self.send_json({
         'UserId': 1,
         'Name': 'Roblox',
@@ -300,29 +300,29 @@ def _(self: web_server_handler) -> bool:
     return True
 
 
-@server_path('/My/Places', versions={versions.rōblox.v535})
-@server_path('/My/Places.aspx', versions={versions.rōblox.v535})
+@server_path('/My/Places', versions={versions.rōblox.v554})
+@server_path('/My/Places.aspx', versions={versions.rōblox.v554})
 def _(self: web_server_handler) -> bool:
-    '''2022M My Places. Returns empty place list for Studio.'''
+    '''2022L My Places. Returns empty place list for Studio.'''
     self.send_json({'data': [], 'nextPageCursor': None})
     return True
 
 
-@server_path('/GetAllowedSecurityKeys/index', versions={versions.rōblox.v535})
-@server_path('/GetAllowedSecurityKeys/', versions={versions.rōblox.v535})
+@server_path('/GetAllowedSecurityKeys/index', versions={versions.rōblox.v554})
+@server_path('/GetAllowedSecurityKeys/', versions={versions.rōblox.v554})
 def _(self: web_server_handler) -> bool:
     self.send_json({})
     return True
 
 
-@server_path(r'/universal-app-configuration/v1/behaviors/[^/]+/content', regex=True, versions={versions.rōblox.v535})
+@server_path(r'/universal-app-configuration/v1/behaviors/[^/]+/content', regex=True, versions={versions.rōblox.v554})
 def _(self: web_server_handler, match) -> bool:
     self.send_json({})
     return True
 
 _PCSTUDIOAPP_PATH = os.path.join(os.path.dirname(__file__), 'PCStudioApp.json')
 
-@server_path('/v2/settings/application/PCStudioApp', versions={versions.rōblox.v535})
+@server_path('/v2/settings/application/PCStudioApp', versions={versions.rōblox.v554})
 def _(self: web_server_handler) -> bool:
     '''
     Studio FFlag settings blob (~275KB). Served from PCStudioApp.json
@@ -342,7 +342,7 @@ def _(self: web_server_handler) -> bool:
     return True
 
 
-@server_path('/universes/get-info', versions={versions.rōblox.v535})
+@server_path('/universes/get-info', versions={versions.rōblox.v554})
 def _(self: web_server_handler) -> bool:
     self.send_json({
         'Name': 'RBLXHUB',
@@ -355,18 +355,18 @@ def _(self: web_server_handler) -> bool:
     return True
 
 
-@server_path('/universes/validate-place-join', versions={versions.rōblox.v535})
+@server_path('/universes/validate-place-join', versions={versions.rōblox.v554})
 def _(self: web_server_handler) -> bool:
     self.send_data(b'true')
     return True
 
 
-@server_path(r'/universes/\d+/cloudeditenabled', regex=True, versions={versions.rōblox.v535})
+@server_path(r'/universes/\d+/cloudeditenabled', regex=True, versions={versions.rōblox.v554})
 def _(self: web_server_handler, match) -> bool:
     self.send_json({'canManage': True, 'canCloudEdit': True})
     return True
 
-@server_path(r'/v1/user/\d+/canmanage/\d+', regex=True, versions={versions.rōblox.v535})
+@server_path(r'/v1/user/\d+/canmanage/\d+', regex=True, versions={versions.rōblox.v554})
 def _(self: web_server_handler, match) -> bool:
     self.send_json({'Success': True, 'CanManage': True})
     return True
