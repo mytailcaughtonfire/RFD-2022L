@@ -1,6 +1,6 @@
 <h1 align="center"><img src="/Assets/Logo.png" height="20px"/> Rōblox: Freedom Distribution <img src="/Assets/Logo.png" height="20px"/></h1>
 
-_This is a fork of Roblox Freedom Distribution that aims to add in a July 12, 2022 Rōblox Studio and Client!_
+_This is a fork of Roblox Freedom Distribution that aims to add in a December 8th, 2022 Rōblox Studio and Client!_
 
 ⚠ This is made with the use of LLMs! 
 
@@ -23,32 +23,32 @@ roblox_version = '2022'
 
 ### Connectivity
 
-- [x] Studio launches and connects to place
-- [x] Server launches and connects to place
-- [x] Player launches and connects to place
+- [ ] Studio launches and connects to place
+- [ ] Server launches and connects to place
+- [ ] Player launches and connects to place
 
 ### Asset Loading  
 
-- [x] Assets Cache successfully
-- [x] MeshID
-- [x] TextureID
-- [x] RBXM
-- [x] SoundID
+- [ ] Assets Cache successfully
+- [ ] MeshID
+- [ ] TextureID
+- [ ] RBXM
+- [ ] SoundID
 - [ ] Material Variants in RobloxPlayerBeta
-- [x] Default Materials
+- [ ] Default Materials
 - [ ] 2022 Materials
 
 ### Functionality
 
-- [x] Studio/Server auto sign-in
+- [ ] Studio/Server auto sign-in
 - [ ] Studio controls
-- [x] Copy/Paste from 2026 to 2022 studio (partially working!)
+- [ ] Copy/Paste from 2026 to 2022 studio (partially working!)
 
 ### Features & Customization
 
 - [ ] F9 Server Console
 - [ ] Freecam
-- [x] Unlocked FPS
+- [ ] Unlocked FPS
 - [ ] Avatar Loading
 - [ ] Launcher?
 
@@ -57,7 +57,7 @@ roblox_version = '2022'
 - [ ] Place Settings (name, creator, thumbnail)
 - [ ] Asset Redirection
 - [ ] Tool Loading
-- [x] UserID generation
+- [ ] UserID generation
 - [ ] Datasaving
 - [ ] other stuff
 
