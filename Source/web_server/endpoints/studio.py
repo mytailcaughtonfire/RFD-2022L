@@ -187,6 +187,129 @@ def _(self: web_server_handler) -> bool:
     })
     return True
 
+@server_path('/login/return-to-studio', versions={versions.rōblox.v554})
+def _(self: web_server_handler) -> bool:
+    # Set auth cookies
+    self.send_response(200)
+    self.send_header('Content-Type', 'text/html')
+    self.send_header('set-cookie', _make_cookie('.ROBLOSECURITY', _ROBLOSECURITY))
+    self.send_header('set-cookie', _make_cookie('.RBXID', _RBXID))
+    self.end_headers()
+    # Return an HTML page that redirects back to Studio via protocol URI
+    html = f'''<!DOCTYPE html>
+        <html>
+        <head><title>Logging into Studio...</title></head>
+        <body>
+        <p>Logging you in, please wait...</p>
+        </body>
+        </html>'''
+    self.wfile.write(html.encode())
+    return True
+
+@server_path('/login/negotiate.ashx', versions={versions.rōblox.v554})
+def _(self: web_server_handler) -> bool:
+    self.send_response(200)
+    self.send_header('set-cookie', _make_cookie('.ROBLOSECURITY', _ROBLOSECURITY))
+    self.send_header('set-cookie', _make_cookie('.RBXID', _RBXID))
+    self.send_json({
+        'user': {
+            'id': 1,
+            'name': 'Roblox',
+            'displayName': 'Roblox',
+        },
+    }, status=None)
+    return True
+
+@server_path('/oauth/.well-known/openid-configuration', versions={versions.rōblox.v554})
+def _(self: web_server_handler) -> bool:
+    base = self.hostname
+    self.send_json({
+        'issuer': f'{base}/oauth/',
+        'authorization_endpoint': f'{base}/oauth/v1/authorize',
+        'token_endpoint': f'{base}/oauth/v1/token',
+        'introspection_endpoint': f'{base}/oauth/v1/token/introspect',
+        'revocation_endpoint': f'{base}/oauth/v1/token/revoke',
+        'resources_endpoint': f'{base}/oauth/v1/token/resources',
+        'userinfo_endpoint': f'{base}/oauth/v1/userinfo',
+        'jwks_uri': f'{base}/oauth/v1/certs',
+        'registration_endpoint': 'https://create.roblox.com/dashboard/credentials',
+        'service_documentation': 'https://create.roblox.com/docs/reference/cloud',
+        'scopes_supported': ['openid', 'profile', 'email', 'verification', 'credentials', 'age', 'premium', 'roles'],
+        'response_types_supported': ['none', 'code'],
+        'subject_types_supported': ['public'],
+        'id_token_signing_alg_values_supported': ['ES256'],
+        'claims_supported': [
+            'sub', 'type', 'iss', 'aud', 'exp', 'iat', 'nonce',
+            'name', 'nickname', 'preferred_username', 'created_at',
+            'profile', 'picture', 'email', 'email_verified', 'verified',
+            'age_bracket', 'premium', 'roles', 'internal_user',
+        ],
+        'token_endpoint_auth_methods_supported': ['client_secret_post', 'client_secret_basic'],
+    })
+    return True
+
+@server_path('/oauth/v1/authorize', versions={versions.rōblox.v554})
+def _(self: web_server_handler) -> bool:
+    # Redirect browser to our login page with state param preserved
+    state = self.query.get('state', '')
+    self.send_response(302)
+    self.send_header('Location', f'{self.hostname}/oauth/v1/login?state={state}')
+    self.end_headers()
+    return True
+
+@server_path('/oauth/v1/login', versions={versions.rōblox.v554})
+def _(self: web_server_handler) -> bool:
+    state = self.query.get('state', '')
+    self.send_response(200)
+    self.send_header('Content-Type', 'text/html')
+    self.end_headers()
+    # Serve the authorize.html content but inject the state
+    html = open('authorize.html').read() if False else f'''<!DOCTYPE html>
+<html><head><title>Studio Login</title></head>
+<body style="background:#212529;color:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;font-family:Arial">
+<div style="text-align:center;background:#30363b;padding:20px;border-radius:10px">
+<h1>Studio Login</h1>
+<p>Click below to log in.</p>
+<button onclick="window.location.href='roblox-studio-auth:/?code=a&state={state}'"
+style="background:#4CAF50;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer">
+Login</button></div></body></html>'''
+    self.wfile.write(html.encode())
+    return True
+
+
+@server_path('/oauth/v1/token', versions={versions.rōblox.v554})
+def _(self: web_server_handler) -> bool:
+    self.send_json({
+        'access_token': 'eyJhbGciOiJFUzI1NiIsImtpZCI6IlBOeHhpb2JFNE8zbGhQUUlUZG9QQ3FCTE81amh3aXZFS1pHOWhfTGJNOWMiLCJ0eXAiOiJKV11234.eyJzdWIiOiIxIiwic2NvcGUiOiJvcGVuaWQ6cmVhZCBwcm9maWxlOnJlYWQiLCJqdGkiOiJBVC5mYWtlIiwibmJmIjoxNjkxNjM5Njk4LCJleHAiOjk5OTk5OTk5OTksImlhdCI6MTY5MTYzOTY5OCwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdC9vYXV0aC8iLCJhdWQiOiI3OTY4NTQ5NDIyNjkyMzUyMjk4In0.fake',
+        'refresh_token': 'fake_refresh_token',
+        'token_type': 'Bearer',
+        'expires_in': 99999999,
+        'id_token': 'eyJhbGciOiJFUzI1NiIsImtpZCI6IkNWWDU1Mi1zeWh4Y1VGdW5vNktScmtReFB1eW15YTRQVllodWdsd3hnNzgiLCJ0eXAiOiJKV11234.eyJzdWIiOiIxIiwibmFtZSI6IlJPQkxPWCIsIm5pY2tuYW1lIjoiUk9CTE9YIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiUk9CTE9YIiwiY3JlYXRlZF9hdCI6MSwibm9uY2UiOiIxMjM0NSIsImp0aSI6IklELmZha2UiLCJuYmYiOjE2OTE2Mzk2OTgsImV4cCI6OTk5OTk5OTk5OSwiaWF0IjoxNjkxNjM5Njk4LCJpc3MiOiJodHRwOi8vbG9jYWxob3N0L29hdXRoLyIsImF1ZCI6Ijc5Njg1NDk0MjI2OTIzNTIyOTgifQ.fake',
+        'scope': 'openid profile',
+    })
+    return True
+
+@server_path('/oauth/v1/userinfo', versions={versions.rōblox.v554})
+def _(self: web_server_handler) -> bool:
+    self.send_json({
+        'sub': '1',
+        'name': 'ROBLOX',
+        'nickname': 'ROBLOX',
+        'preferred_username': 'ROBLOX',
+        'created_at': 1,
+        'profile': 'https://www.rbolock.tk/users/1/profile',
+        'picture': 'https://www.rbolock.tk/headshots/default.png',
+        'age_bracket': 'Age13OrOver',
+        'premium': False,
+        'roles': [],
+        'internal_user': False,
+    })
+    return True
+
+@server_path('/oauth/v1/certs', versions={versions.rōblox.v554})
+def _(self: web_server_handler) -> bool:
+    self.send_json({'keys': []})
+    return True
 
 @server_path('/game/GetCurrentUser.ashx', versions={versions.rōblox.v554})
 def _(self: web_server_handler) -> bool:

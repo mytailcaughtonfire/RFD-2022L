@@ -1,6 +1,6 @@
 {
     "applicationSettings": {
-        "AndroidSwipeGestureUseStartingPosition": "True",
+		"AndroidSwipeGestureUseStartingPosition": "True",
         "DFFlagAccoutrementWeldingFilteringEnabled": "False",
         "DFFlagAdminServerLogs": "True",
         "DFFlagAnalyticsNS1BeaconSupportLimitedRobloxUrls": "True",
@@ -3852,5 +3852,5 @@
         "DFStringFlagRepoGitHashDynamicString": "67854042201715f18374b5e39107ea100a44e369",
         "FStringFlipTimeStampFastString": "2022-08-26T06:22:17.590Z",
         "DFStringFlipTimeStampDynamicString": "2022-08-26T06:22:17.590Z"
-    }
+	}
 }

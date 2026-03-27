@@ -8,12 +8,14 @@ import util.const
 STUDIO_USE_KTX: bool = True
 
 # Maps DXT accept header → ordered list of TexturePack XML element names to try.
-# spec_dxt tries roughness first, then metalness as fallback.
+# spec_dxt is ambiguous in old clients; prefer metalness, then roughness.
+# Note: `ktx/dxt` is a transport/container accept header and does NOT indicate
+# which TexturePack channel the client wants, so it must not be used for
+# TexturePack channel resolution.
 _DXT_TO_TEXTUREPACK_CHANNELS = {
     'rbx-format/color_dxt': ['color'],
     'rbx-format/norm_dxt':  ['normal'],
-    'rbx-format/spec_dxt':  ['roughness', 'metalness'],
-    'ktx/dxt':              ['color', 'normal', 'metalness', 'roughness'],
+    'rbx-format/spec_dxt':  ['metalness', 'roughness'],
 }
 
 
@@ -57,7 +59,14 @@ def _resolve_texturepack_dxt(
     data = asset_cache.get_ktx_asset(texture_id, accept)
     if data is not None:
         kb = len(data) / 1024
-        print(f'[texturepack] serving id={texture_id} accept={accept} size={kb:.1f}KB magic={data[:4]}', flush=True)
+        # Print a bit more info to diagnose spec/roughness issues.
+        # (This is stdout-only logging; safe in prod.)
+        try:
+            import hashlib as _hashlib
+            sha = _hashlib.sha256(data).hexdigest()[:16]
+        except Exception:
+            sha = 'err'
+        print(f'[texturepack] serving id={texture_id} accept={accept} size={kb:.1f}KB magic={data[:4]} sha256[:16]={sha}', flush=True)
         return data
 
     # Fetch the individual texture from CDN with the DXT accept header.
@@ -129,11 +138,26 @@ def _(self: web_server_handler) -> bool:
         asset_path = asset_cache.get_asset_path(asset_id)
         local_data = asset_cache._load_file(asset_path)
         if local_data is not None and b'<texturepack_version>' in local_data:
+            # Prefer CDN's own TexturePack->DXT conversion when possible.
+            # This preserves Roblox-side packing semantics for spec_dxt.
+            if isinstance(asset_id, int):
+                cdn_dxt_data = asset_cache.get_ktx_asset(asset_id, accept)
+                if cdn_dxt_data is not None and cdn_dxt_data[:4] == b'\xabKTX':
+                    kb = len(cdn_dxt_data) / 1024
+                    print(f'[asset] sending CDN TexturePack DXT id={asset_id} accept={accept} size={kb:.1f}KB magic={cdn_dxt_data[:4]}', flush=True)
+                    self.send_data(cdn_dxt_data, content_type='application/gzip')
+                    return True
+
             dxt_data = _resolve_texturepack_dxt(local_data, accept, asset_cache)
             if dxt_data is not None:
                 kb = len(dxt_data) / 1024
                 print(f'[asset] sending TexturePack DXT id={asset_id} accept={accept} size={kb:.1f}KB magic={dxt_data[:4]}', flush=True)
-                self.send_data(dxt_data, content_type='application/octet-stream')
+                # Match Roblox CDN behavior a bit closer: it returns gzip and
+                # labels it as application/gzip. We don't gzip here, but some
+                # clients appear to care about the content-type.
+                #
+                # If this causes issues elsewhere, revert to application/octet-stream.
+                self.send_data(dxt_data, content_type='application/gzip')
                 return True
 
     asset = asset_cache.get_asset(
