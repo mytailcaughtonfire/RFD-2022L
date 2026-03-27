@@ -3,7 +3,7 @@
 GIT_RELEASE_VERSION = '''0.66.0'''
 
 ZIPPED_RELEASE_VERSION = '''0.66.0-binaries'''
-ZIPPED_RELEASE_LINK_FORMAT = 'https://github.com/mytailcaughtonfire/RFD-2022M/releases/download/%s/%s.%s.7z'
+ZIPPED_RELEASE_LINK_FORMAT = 'https://github.com/mytailcaughtonfire/RFD-2022L/releases/download/%s/%s.%s.7z'
 
 PLACE_IDEN_CONST = 1818
 
