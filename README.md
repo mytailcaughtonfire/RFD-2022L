@@ -1,6 +1,8 @@
 <h1 align="center"><img src="/Assets/Logo.png" height="20px"/> Rōblox: Freedom Distribution <img src="/Assets/Logo.png" height="20px"/></h1>
 
-_This is a fork of Roblox Freedom Distribution that aims to add in a July 12, 2022 Rōblox Studio and Client!_
+_This project contains 2 branches! You're viewing the **2022M branch,** which is for 0.535 Player & Studio_
+
+_This is a fork of Roblox Freedom Distribution that aims to launch a July 12th, 2022 Rōblox Studio Client and Player Client!_
 
 ⚠ This is made with the use of LLMs! 
 
