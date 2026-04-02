@@ -36,9 +36,9 @@ roblox_version = '2022'
 - [x] TextureID
 - [x] RBXM
 - [x] SoundID
-- [ ] Material Variants in RobloxPlayerBeta
+- [x] Material Variants in RobloxPlayerBeta
 - [x] Default Materials
-- [ ] 2022 Materials
+- [ ] 2022 Materials (partially working)
 
 ### Functionality
 
@@ -48,7 +48,7 @@ roblox_version = '2022'
 
 ### Features & Customization
 
-- [ ] F9 Server Console
+- [x] F9 Server Console
 - [ ] Freecam
 - [x] Unlocked FPS
 - [ ] Avatar Loading
@@ -56,8 +56,8 @@ roblox_version = '2022'
 
 ### RFD Compatbility
 
-- [ ] Place Settings (name, creator, thumbnail)
-- [ ] Asset Redirection
+- [x] Place Settings (name, creator, thumbnail) (icon not working)
+- [x] Asset Redirection
 - [ ] Tool Loading
 - [x] UserID generation
 - [ ] Datasaving
