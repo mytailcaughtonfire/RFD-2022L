@@ -187,6 +187,16 @@ def _(self: web_server_handler) -> bool:
     })
     return True
 
+@server_path('/v1/autolocalization/games/1/autolocalizationtable', versions={versions.rōblox.v535})
+def _(self: web_server_handler) -> bool:
+    self.send_json({
+        "isAutolocalizationEnabled": True,
+        "shouldUseLocalizationTable": True,
+        "autoLocalizationTableId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "assetId": 1818
+    })
+    return True
+
 
 @server_path('/game/GetCurrentUser.ashx', versions={versions.rōblox.v535})
 def _(self: web_server_handler) -> bool:
@@ -315,7 +325,7 @@ def _(self: web_server_handler) -> bool:
     return True
 
 
-@server_path(r'/universal-app-configuration/v1/behaviors/[^/]+/content', regex=True, versions={versions.rōblox.v535})
+@server_path(r'/universal-app-configuration/v1/behaviors/studio/content', regex=True, versions={versions.rōblox.v535})
 def _(self: web_server_handler, match) -> bool:
     self.send_json({})
     return True

@@ -18,65 +18,6 @@ _DXT_TO_TEXTUREPACK_CHANNELS = {
     'rbx-format/spec_dxt':  ['metalness', 'roughness'],
 }
 
-
-def _resolve_texturepack_dxt(
-    data: bytes,
-    accept: str,
-    asset_cache,
-) -> bytes | None:
-    '''
-    Given a TexturePack XML blob and a DXT accept header, parse the XML,
-    find the texture ID for the requested channel, then fetch that texture
-    from CDN with the DXT accept header forwarded.
-    spec_dxt tries metalness first, then roughness as fallback.
-    '''
-    import xml.etree.ElementTree as _ET
-    channels = _DXT_TO_TEXTUREPACK_CHANNELS.get(accept)
-    if not channels:
-        return None
-    try:
-        root = _ET.fromstring(data.decode('utf-8', errors='replace'))
-    except Exception:
-        return None
-
-    texture_id = None
-    for channel in channels:
-        el = root.find(channel)
-        if el is not None and el.text:
-            try:
-                texture_id = int(el.text.strip())
-                break
-            except ValueError:
-                continue
-
-    if texture_id is None:
-        print(f'[texturepack] no texture found for {accept} in channels {channels}', flush=True)
-        return None
-
-    print(f'[texturepack] {accept} → texture_id={texture_id}', flush=True)
-    # Use KTX cache (id-ktx files). Downloads from CDN if not cached.
-    # Normalize spec_dxt to ktx/dxt for CDN fetch
-    data = asset_cache.get_ktx_asset(texture_id, accept)
-    if data is not None:
-        kb = len(data) / 1024
-        # Print a bit more info to diagnose spec/roughness issues.
-        # (This is stdout-only logging; safe in prod.)
-        try:
-            import hashlib as _hashlib
-            sha = _hashlib.sha256(data).hexdigest()[:16]
-        except Exception:
-            sha = 'err'
-        print(f'[texturepack] serving id={texture_id} accept={accept} size={kb:.1f}KB magic={data[:4]} sha256[:16]={sha}', flush=True)
-        return data
-
-    # Fetch the individual texture from CDN with the DXT accept header.
-    # result = asset_cache.get_asset(texture_id, bypass_blocklist=True, accept=accept)
-    # if isinstance(result, returns.ret_data):
-    #     print(f"[texturepack] {accept} fetched {len(result.data)} bytes, magic={result.data[:4]}", flush=True)
-    #     return result.data
-    print(f'[texturepack] CDN returned nothing for {texture_id} with {accept}', flush=True)
-    return None
-
 #@server_path("/v2/assets")
 #@server_path("/v2/assets/")
 
@@ -127,7 +68,7 @@ def _(self: web_server_handler) -> bool:
         accept = None
 
     # TexturePack DXT resolver: load XML from cache, resolve to texture ID, serve KTX.
-    print(f'[dxt check] id={asset_id} accept={accept} is_studio={is_studio}', flush=True)
+    #print(f'[dxt check] id={asset_id} accept={accept} is_studio={is_studio}', flush=True)
     
     # For DXT TexturePack requests, we need to check the local cache first
     # regardless of the accept header — DXT path in get_asset bypasses the
@@ -144,21 +85,9 @@ def _(self: web_server_handler) -> bool:
                 cdn_dxt_data = asset_cache.get_ktx_asset(asset_id, accept)
                 if cdn_dxt_data is not None and cdn_dxt_data[:4] == b'\xabKTX':
                     kb = len(cdn_dxt_data) / 1024
-                    print(f'[asset] sending CDN TexturePack DXT id={asset_id} accept={accept} size={kb:.1f}KB magic={cdn_dxt_data[:4]}', flush=True)
+                    #print(f'[asset] sending CDN TexturePack DXT id={asset_id} accept={accept} size={kb:.1f}KB magic={cdn_dxt_data[:4]}', flush=True)
                     self.send_data(cdn_dxt_data, content_type='application/gzip')
                     return True
-
-            dxt_data = _resolve_texturepack_dxt(local_data, accept, asset_cache)
-            if dxt_data is not None:
-                kb = len(dxt_data) / 1024
-                print(f'[asset] sending TexturePack DXT id={asset_id} accept={accept} size={kb:.1f}KB magic={dxt_data[:4]}', flush=True)
-                # Match Roblox CDN behavior a bit closer: it returns gzip and
-                # labels it as application/gzip. We don't gzip here, but some
-                # clients appear to care about the content-type.
-                #
-                # If this causes issues elsewhere, revert to application/octet-stream.
-                self.send_data(dxt_data, content_type='application/gzip')
-                return True
 
     asset = asset_cache.get_asset(
         asset_id,
@@ -176,10 +105,12 @@ def _(self: web_server_handler) -> bool:
                 b'<texturepack_version>' in data or
                 b'texturepack' in data[:256].lower()
             )
-            if is_texturepack:
-                dxt_data = _resolve_texturepack_dxt(data, accept, asset_cache)
-                if dxt_data is not None:
-                    self.send_data(dxt_data, content_type='application/octet-stream')
+            if isinstance(asset_id, int):
+                cdn_dxt_data = asset_cache.get_ktx_asset(asset_id, accept)
+                if cdn_dxt_data is not None and cdn_dxt_data[:4] == b'\xabKTX':
+                    kb = len(cdn_dxt_data) / 1024
+                    #print(f'[asset] sending CDN TexturePack DXT id={asset_id} accept={accept} size={kb:.1f}KB magic={cdn_dxt_data[:4]}', flush=True)
+                    self.send_data(cdn_dxt_data, content_type='application/gzip')
                     return True
 
         # Detect content type from magic bytes so the PBR pipeline
@@ -237,7 +168,7 @@ def _(self: web_server_handler) -> bool:
         with open(_os.path.join(dump_dir, f'{stamp}.json'), 'w', encoding='utf-8') as _f:
             _f.write(body.decode('utf-8', errors='replace'))
 
-        print(f'[batch] Dumped to {dump_dir}/{stamp}.*', flush=True)
+        #print(f'[batch] Dumped to {dump_dir}/{stamp}.*', flush=True)
 
         requests_list = _json.loads(body)
     except Exception:

@@ -34,7 +34,7 @@ class config_type(allocateable.obj_type):
 
         # Don't count too much on 2021E.
         # I really recommend that people manually specify which version of Rōblox they want to run.
-        roblox_version: util.versions.rōblox = util.versions.rōblox.v463
+        roblox_version: util.versions.rōblox = util.versions.rōblox.v535
 
     class server_core(allocateable.obj_type):
         class place_file(allocateable.obj_type):

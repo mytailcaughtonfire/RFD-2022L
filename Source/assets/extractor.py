@@ -118,8 +118,8 @@ def download_item(url: str, cookie: str | None = None, accept: str | None = None
     try:
         http = urllib3.PoolManager()
         response = http.request('GET', url, headers=headers)
-        if accept is not None and accept in _DXT_ACCEPT_HEADERS:
-            print(f'[dxt] {url} status={response.status} content-type={response.headers.get("Content-Type")} content-encoding={response.headers.get("Content-Encoding")} len={len(response.data)}', flush=True)
+        #if accept is not None and accept in _DXT_ACCEPT_HEADERS:
+            #print(f'[dxt] {url} status={response.status} content-type={response.headers.get("Content-Type")} content-encoding={response.headers.get("Content-Encoding")} len={len(response.data)}', flush=True)
             #print(f'[dxt headers] {dict(response.headers)}', flush=True)
         if response.status != 200:
             return None

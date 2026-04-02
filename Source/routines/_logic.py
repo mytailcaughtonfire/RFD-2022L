@@ -111,7 +111,7 @@ class popen_entry(base_entry):
 
         if self.debug_x96:
             popen_dbg = subprocess.Popen[str]([
-                'x96dbg',
+                'x64dbg',
                 '-p', str(principal.pid),
             ])
             self.popen_daemons.append(popen_dbg)

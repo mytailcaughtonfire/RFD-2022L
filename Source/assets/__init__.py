@@ -234,7 +234,7 @@ class asseter:
             if isinstance(asset_id, int):
                 data = self.get_ktx_asset(asset_id, accept)
                 return returns.construct(data=data)
-            print(f'[dxt] couldnt get a ktx asset for asset_id={asset_id} accept={accept}')
+            #print(f'[dxt] couldnt get a ktx asset for asset_id={asset_id} accept={accept}')
             return returns.construct()
 
         asset_path = self.get_asset_path(asset_id)
